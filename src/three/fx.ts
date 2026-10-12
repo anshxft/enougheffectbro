@@ -1,4 +1,5 @@
 import gsap from 'gsap'
+import { Vector2, type Texture } from 'three'
 import { whoosh } from '../lib/sound'
 
 // Animated values the WebGL scene reads every frame; GSAP tweens them from the DOM side.
@@ -14,6 +15,9 @@ export const hud = {
   yaw: 0, // prism rotation around Y, radians
   tint: [0, 0, 0], // room colour, 0..1 (linear)
 }
+
+// Ripple displacement field written by Ripples.tsx, read by the LensGlitch post effect.
+export const rippleField = { texture: null as Texture | null, texel: new Vector2(1 / 512, 1 / 512), active: false }
 
 let played = false
 export const introPlayed = () => played

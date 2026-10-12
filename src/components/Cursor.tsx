@@ -28,7 +28,7 @@ export default function Cursor() {
       dy(e.clientY)
       rx(e.clientX)
       ry(e.clientY)
-      const hot = (e.target as Element | null)?.closest('a, button')
+      const hot = (e.target instanceof Element ? e.target.closest('a, button') : null)
       gsap.to(r, { scale: hot ? 1.8 : 1, duration: 0.25, overwrite: 'auto' })
     }
     const leave = () => {

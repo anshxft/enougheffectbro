@@ -10,6 +10,7 @@ import { GLYPH_A } from './glyph-a'
 import { LensGlitchEffect } from './LensGlitch'
 import { tint } from './palette'
 import Backdrop from './Backdrop'
+import Ripples from './Ripples'
 import Works from './Works'
 import { input, listenInput } from './input'
 import glassVert from './shaders/glass.vert'
@@ -224,7 +225,12 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
           <Works />
         </Suspense>
         <ReadySignal onReady={onReady} />
-        {fxFlags !== '0' && <Effects />}
+        {fxFlags !== '0' && (
+          <>
+            <Ripples />
+            <Effects />
+          </>
+        )}
         {flags.get('perf') === '1' && (
           <Suspense fallback={null}>
             <Perf position="bottom-left" />

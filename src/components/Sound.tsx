@@ -57,8 +57,8 @@ export function SoundPrompt() {
   // a global hover blip for links and buttons (no-op while sound is off)
   useEffect(() => {
     const over = (e: PointerEvent) => {
-      const el = (e.target as Element | null)?.closest('a, button')
-      const from = (e.relatedTarget as Element | null)?.closest?.('a, button')
+      const el = (e.target instanceof Element ? e.target.closest('a, button') : null)
+      const from = (e.relatedTarget instanceof Element ? e.relatedTarget.closest('a, button') : null)
       if (el && el !== from) blip()
     }
     window.addEventListener('pointerover', over)
