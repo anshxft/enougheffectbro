@@ -30,10 +30,10 @@ function useGlyphGeometry() {
     const svg = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg"><path d="${GLYPH_A.path}"/></svg>`)
     const shapes = svg.paths.flatMap((p) => p.toShapes())
     const geo = new THREE.ExtrudeGeometry(shapes, {
-      depth: 260,
+      depth: 130,
       bevelEnabled: true,
-      bevelThickness: 40,
-      bevelSize: 22,
+      bevelThickness: 24,
+      bevelSize: 14,
       bevelSegments: 6,
       curveSegments: 24,
     })
@@ -51,7 +51,7 @@ function Prism({ low }: { low: boolean }) {
   const { viewport, size } = useThree()
   const mobile = useMemo(() => isMobile(), [])
   const still = useMemo(() => reducedMotion(), [])
-  const scale = Math.min(viewport.width * (mobile ? 0.48 : 0.32), viewport.height * 0.55, 3.2)
+  const scale = Math.min(viewport.width * (mobile ? 0.75 : 0.52), viewport.height * 0.9, 5.2)
   const pop = useRef(0)
   // The glass re-renders the scene behind it every frame, so it only runs in the hero and the contact finale.
   const [onStage, setOnStage] = useState(true)
@@ -63,7 +63,7 @@ function Prism({ low }: { low: boolean }) {
       uScene: { value: null as THREE.Texture | null },
       uResolution: { value: new THREE.Vector2(1, 1) },
       uTime: { value: 0 },
-      uRefract: { value: 0.07 },
+      uRefract: { value: 0.022 },
     }),
     [],
   )
@@ -82,8 +82,9 @@ function Prism({ low }: { low: boolean }) {
     // intro: grow from 55% with a little overshoot while spinning into place
     pop.current += (fx.intro - pop.current) * (1 - Math.exp(-dt * 6))
     const p = pop.current
-    m.scale.setScalar(scale * (0.55 + 0.45 * p + Math.sin(p * Math.PI) * 0.12) * (cp > 0 ? (mobile ? 0.8 : 0.7) : 1))
-    const targetY = (still ? 0 : t * 0.25) + s * Math.PI * 1.2 + input.pointer.x * 0.5 + (1 - p) * Math.PI * 2
+    m.scale.setScalar(scale * (0.55 + 0.45 * p + Math.sin(p * Math.PI) * 0.12) * (cp > 0 ? (mobile ? 0.5 : 0.43) : 1))
+    // sway instead of a full spin: a big A seen edge-on reads as a solid slab
+    const targetY = (still ? 0 : Math.sin(t * 0.35) * 0.55) + s * Math.PI * 0.6 + input.pointer.x * 0.35 + (1 - p) * Math.PI * 2
     const targetX = -input.pointer.y * 0.3 + Math.sin(t * 0.4) * (still ? 0 : 0.08)
     m.rotation.y += (targetY - m.rotation.y) * k
     m.rotation.x += (targetX - m.rotation.x) * k
@@ -112,7 +113,7 @@ function Prism({ low }: { low: boolean }) {
 
   return (
     <mesh ref={ref} geometry={geo} visible={onStage}>
-      <shaderMaterial ref={mat} vertexShader={glassVert} fragmentShader={glassFrag} uniforms={uniforms} side={THREE.DoubleSide} />
+      <shaderMaterial ref={mat} vertexShader={glassVert} fragmentShader={glassFrag} uniforms={uniforms} />
     </mesh>
   )
 }

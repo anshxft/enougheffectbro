@@ -26,18 +26,20 @@ void main() {
   refr.b = texture2D(uScene, uv - off * 1.25).b;
 
   float facing = max(dot(n, v), 0.0);
-  float fresnel = pow(1.0 - facing, 2.5);
+  // high power keeps the colour film on the rims, so the faces read as clear glass
+  float fresnel = pow(1.0 - facing, 3.2);
 
   // iridescent film: hue shifts with view angle, surface orientation and time
   vec3 film = rainbow(fresnel * 1.4 + dot(n, vec3(0.4, 0.8, 0.2)) * 0.6 + uTime * 0.04);
 
-  vec3 col = refr * vec3(0.92, 0.95, 1.0);
-  col = mix(col, film, fresnel * 0.75);
+  // faint sheen so the faces still read as a surface, film strongest on the rims
+  vec3 col = refr + 0.035;
+  col = mix(col, film, fresnel * 0.55);
   col += film * pow(1.0 - facing, 6.0) * 0.6;
 
   // glints from two fake lights
   vec3 r = reflect(-v, n);
-  col += pow(max(dot(r, normalize(vec3(0.5, 0.8, 0.6))), 0.0), 48.0) * 1.4;
+  col += pow(max(dot(r, normalize(vec3(0.5, 0.8, 0.6))), 0.0), 64.0) * 1.1;
   col += pow(max(dot(r, normalize(vec3(-0.7, -0.2, 0.7))), 0.0), 24.0) * vec3(0.3, 0.45, 1.0) * 0.8;
 
   gl_FragColor = vec4(col, 1.0);
