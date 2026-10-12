@@ -29,7 +29,7 @@ export default function Experience() {
   )
 
   return (
-    <section ref={root} id="experience" aria-labelledby="experience-title" className="relative px-4 py-32 sm:px-8">
+    <section ref={root} id="experience" aria-labelledby="experience-title" className="relative overflow-x-clip px-4 py-32 sm:px-8">
       <p className="label mb-10">/ Experience</p>
       <h2 id="experience-title" className="display mb-20 text-[clamp(3rem,12vw,10rem)]">
         Journey
