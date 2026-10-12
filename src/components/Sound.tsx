@@ -16,7 +16,7 @@ export function SoundToggle() {
       onClick={() => setSound(!on)}
       aria-pressed={on}
       aria-label={on ? 'Turn sound off' : 'Turn sound on'}
-      className="label flex items-center gap-2 text-fg! transition-opacity hover:opacity-70"
+      className="label flex min-h-11 min-w-11 items-center justify-center gap-2 text-fg! transition-opacity hover:opacity-70"
     >
       <span className="flex h-3 items-end gap-[2px]" aria-hidden>
         {[0, 1, 2, 3].map((i) => (

@@ -18,19 +18,23 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     lockScroll(true)
+    // everything behind the sheet is unreachable (keyboard and screen readers) while it's open
+    const main = document.querySelector('main')
+    if (main) main.inert = true
     sheet.current?.querySelector('a')?.focus()
     gsap.fromTo(sheet.current!.querySelectorAll('.mm-link'), { yPercent: 110 }, { yPercent: 0, duration: 0.6, ease: 'power3.out', stagger: 0.06 })
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', esc)
     return () => {
       window.removeEventListener('keydown', esc)
+      if (main) main.inert = false
       lockScroll(false)
     }
   }, [onClose])
 
   return (
     <div ref={sheet} id="mobile-menu" role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-[60] flex flex-col justify-between bg-bg px-4 pt-24 pb-8">
-      <nav aria-label="Main" className="flex flex-col gap-2">
+      <nav aria-label="Menu" className="flex flex-col gap-2">
         {nav.map((n, i) => (
           <span key={n.href} className="overflow-hidden">
             <TLink to={n.href} onClick={onClose} className="mm-link display block text-[clamp(2.5rem,13vw,5rem)]">
@@ -58,7 +62,7 @@ export default function Header() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-[70] flex items-center justify-between px-4 py-4 mix-blend-difference sm:px-8">
-        <TLink to="/" className="display text-lg" aria-label={`${site.name}, home`}>
+        <TLink to="/" className="display inline-flex min-h-11 items-center text-lg" aria-label={`${site.name}, home`}>
           {site.name}
         </TLink>
         <nav className="hidden gap-8 sm:flex" aria-label="Main">
@@ -70,7 +74,7 @@ export default function Header() {
         </nav>
         <div className="flex items-center gap-4 sm:gap-6">
           <SoundToggle />
-          <a href={`mailto:${site.email}`} className="label hidden rounded-full border border-fg/40 px-4 py-2 text-fg! transition-colors hover:border-fg sm:inline-block">
+          <a href={`mailto:${site.email}`} className="label hidden min-h-11 items-center rounded-full border border-fg/40 px-5 text-fg! transition-colors hover:border-fg sm:inline-flex">
             Contact
           </a>
           <button
@@ -79,7 +83,7 @@ export default function Header() {
             onClick={() => (open ? close() : setOpen(true))}
             aria-expanded={open}
             aria-controls="mobile-menu"
-            className="label rounded-full border border-fg/40 px-4 py-2 text-fg! sm:hidden"
+            className="label inline-flex min-h-11 items-center rounded-full border border-fg/40 px-5 text-fg! sm:hidden"
           >
             {open ? 'Close' : 'Menu'}
           </button>

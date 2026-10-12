@@ -59,7 +59,7 @@ export default function Home() {
       </Suspense>
       {loading && <Loader ready={webgl || timedOut} onDone={finishLoading} />}
       <Header />
-      <main className="relative z-10">
+      <main id="content" tabIndex={-1} className="relative z-10 outline-none">
         <section id="top" className="relative flex min-h-dvh flex-col justify-end px-4 pb-10 sm:px-8">
           <h1
             className={`display absolute inset-0 flex items-center justify-center text-[clamp(4rem,24vw,24rem)] transition-opacity duration-700 ${webgl ? 'opacity-0' : ''}`}
@@ -103,7 +103,7 @@ export default function Home() {
                       ))}
                     </ul>
                   </div>
-                  <TLink to={`/work/${w.slug}`} className="group inline-flex items-center gap-2 font-mono text-base tracking-widest sm:text-lg">
+                  <TLink to={`/work/${w.slug}`} className="group inline-flex min-h-11 items-center gap-2 font-mono text-base tracking-widest sm:text-lg">
                     <span className="border-b border-transparent transition-colors group-hover:border-fg">View case study</span>
                     <span className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">↗</span>
                   </TLink>

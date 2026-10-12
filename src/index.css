@@ -27,8 +27,12 @@
     min-height: 100dvh;
   }
   ::selection {
-    background: var(--color-accent);
-    color: var(--color-fg);
+    background: var(--color-fg);
+    color: var(--color-bg);
+  }
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3a var(--color-bg);
   }
   :focus-visible {
     outline: 2px solid var(--color-accent);

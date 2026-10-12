@@ -105,7 +105,7 @@ export default function Loader({ ready, onDone }: { ready: boolean; onDone: () =
         </g>
       </svg>
 
-      <div className="ld-hud pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-8">
+      <div aria-hidden className="ld-hud pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-8">
         <div className="flex justify-between">
           <p className="label">Loading</p>
           <p className="label">Portfolio · 2026</p>

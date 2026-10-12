@@ -69,9 +69,11 @@ function WorkView({ slug }: { slug?: string }) {
       <Header />
       <main
         ref={root}
-        className="bg-[linear-gradient(var(--color-grid)_1px,transparent_1px),linear-gradient(90deg,var(--color-grid)_1px,transparent_1px)] bg-[size:72px_72px] px-4 pt-32 pb-20 sm:px-8"
+        id="content"
+        tabIndex={-1}
+        className="outline-none bg-[linear-gradient(var(--color-grid)_1px,transparent_1px),linear-gradient(90deg,var(--color-grid)_1px,transparent_1px)] bg-[size:72px_72px] px-4 pt-32 pb-20 sm:px-8"
       >
-        <TLink to="/#works" className="wk-meta label hover:text-fg">
+        <TLink to="/#works" className="wk-meta label inline-flex min-h-11 items-center hover:text-fg">
           ← All works
         </TLink>
         <p className="wk-meta label mt-10">

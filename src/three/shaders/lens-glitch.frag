@@ -16,7 +16,10 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   float a = uAmount;
   // step(hash, 0.0) is 1 wherever hash is exactly 0, so gate every glitch term by "glitch is on"
   float on = step(0.0001, a);
+  // positional jitter may re-roll fast (it moves pixels, it doesn't flash); anything that changes
+  // brightness re-rolls at most 3x a second (WCAG 2.3.1 three-flashes threshold)
   float t = floor(uTime * 14.0);
+  float tl = floor(uTime * 3.0);
   vec2 st = uv;
 
   // liquid wobble while the hero is on screen: two slow interfering waves nudge every pixel a few px,
@@ -44,12 +47,13 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   col.b = texture2D(inputBuffer, st - dir * ca - vec2(a * 0.004, 0.0)).b;
 
   // accent-blue cells keep the underlying luminance so letters still read through them
-  float blue = on * step(hash(cell * 1.7 + t + 3.1), a * 0.32);
+  vec2 lcell = floor(uv * vec2(16.0, 9.0) * 2.0);
+  float blue = on * step(hash(lcell * 1.7 + tl + 3.1), a * 0.2);
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
   col = mix(col, uAccent * (0.35 + lum * 2.2), blue * 0.95);
 
   // rare white flashes
-  col += on * step(hash(cell * 2.3 + t + 9.7), a * 0.05) * 0.85;
+  col += on * step(hash(lcell * 2.3 + tl + 9.7), a * 0.02) * 0.5;
 
   outputColor = vec4(col, inputColor.a);
 }

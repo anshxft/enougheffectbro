@@ -8,6 +8,7 @@ import fragment from './shaders/lens-glitch.frag'
 export class LensGlitchEffect extends Effect {
   // `force` pins the glitch strength (debug flag /?glitch=0.8) instead of following fx.glitch.
   private force?: number
+  private still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   constructor(accent: string, force?: number, ca = 0.0016) {
     super('LensGlitchEffect', fragment, {
@@ -27,6 +28,6 @@ export class LensGlitchEffect extends Effect {
     this.uniforms.get('uTime')!.value += dt ?? 0.016
     this.uniforms.get('uAmount')!.value = this.force ?? fx.glitch
     // wobble fades out over the first screen of scrolling
-    this.uniforms.get('uWave')!.value = Math.max(0, 1 - input.scroll * 1.5)
+    this.uniforms.get('uWave')!.value = this.still ? 0 : Math.max(0, 1 - input.scroll * 1.5)
   }
 }

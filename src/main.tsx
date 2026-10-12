@@ -15,6 +15,10 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <PageTransitionProvider>
+        {/* first Tab stop: jump past the header (and the intro) to the page content */}
+        <a href="#content" className="label sr-only z-[130] rounded-full bg-fg text-bg! focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:px-5 focus:py-3 focus:whitespace-nowrap">
+          Skip to content
+        </a>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/work/:slug" element={<WorkPage />} />

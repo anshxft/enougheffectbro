@@ -87,13 +87,13 @@ export default function Contact() {
         </a>
         <div className="mt-10 flex flex-wrap items-center gap-4">
           <Magnetic>
-            <button type="button" onClick={copy} className="ct-in label rounded-full bg-accent px-6 py-3 text-fg! transition-colors hover:bg-fg hover:text-bg!" aria-live="polite">
+            <button type="button" onClick={copy} className="ct-in label inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-fg! transition-colors hover:bg-fg hover:text-bg!" aria-live="polite">
               {copied ? 'Copied ✓' : 'Copy email'}
             </button>
           </Magnetic>
           {site.socials.map((s) => (
             <Magnetic key={s.label}>
-              <a href={s.href} target="_blank" rel="noreferrer" className="ct-in label inline-block rounded-full border border-grid px-6 py-3 text-fg! transition-colors hover:border-fg">
+              <a href={s.href} target="_blank" rel="noreferrer" className="ct-in label inline-flex min-h-11 items-center rounded-full border border-grid px-6 text-fg! transition-colors hover:border-fg">
                 {s.label} ↗
               </a>
             </Magnetic>

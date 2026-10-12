@@ -13,6 +13,7 @@ uniform sampler2D uWords;
 uniform float uWordsAspect;
 uniform sampler2D uAmbient;
 uniform float uAmbientAmt;
+uniform float uMotion; // 0 with prefers-reduced-motion: words, rings and ripple hold still
 varying vec2 vWall;
 varying vec3 vWorld;
 
@@ -39,7 +40,7 @@ void main() {
   vec2 view = vec2(atan(dir.x, -dir.z), asin(clamp(dir.y, -1.0, 1.0))) * uRadius;
   vec2 c = vec2(-3.6 + sin(uTime * 0.17) * 0.9, 0.6 + cos(uTime * 0.13) * 0.7);
   float dist = length(view - c);
-  vec2 warp = (view - c) / max(dist, 0.001) * sin(dist * 3.2 - uTime * 1.6) * 0.12 * exp(-dist * 0.9);
+  vec2 warp = (view - c) / max(dist, 0.001) * sin(dist * 3.2 - uTime * 1.6) * 0.12 * exp(-dist * 0.9) * uMotion;
 
   vec2 w = vWall + warp + vec2(0.0, uScroll);
   vec2 p = w / uCell;
@@ -55,7 +56,7 @@ void main() {
   float plus = max(step(d.x, thick) * step(d.y, arm), step(d.y, thick) * step(d.x, arm));
 
   // op-art: huge soft rings slowly rolling outward from a point low on the right
-  float rings = smoothstep(-0.25, 0.25, sin(length(view - vec2(4.5, -2.5)) * 1.15 - uTime * 0.35));
+  float rings = smoothstep(-0.25, 0.25, sin(length(view - vec2(4.5, -2.5)) * 1.15 - uTime * 0.35 * uMotion));
 
   vec2 cell = floor(p);
   float h = hash(cell);
@@ -67,7 +68,7 @@ void main() {
   float inRow = fract((w.y + 100.0) / rowH);
   float dirRow = mod(row, 2.0) * 2.0 - 1.0;
   float wordsW = rowH * 0.8 * uWordsAspect;
-  vec2 wuv = vec2(fract((w.x + uTime * 0.35 * dirRow + row * 3.7) / wordsW), (inRow - 0.1) / 0.8);
+  vec2 wuv = vec2(fract((w.x + uTime * 0.35 * dirRow * uMotion + row * 3.7) / wordsW), (inRow - 0.1) / 0.8);
   // seen from inside the dome the strip runs mirrored, so flip X
   float words = wuv.y > 0.0 && wuv.y < 1.0 ? texture2D(uWords, vec2(1.0 - wuv.x, wuv.y)).a : 0.0;
 

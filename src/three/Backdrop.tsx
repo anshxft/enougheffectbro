@@ -73,6 +73,7 @@ export default function Backdrop() {
       uWordsAspect: { value: 8 },
       uAmbient: { value: BLACK },
       uAmbientAmt: { value: 0 },
+      uMotion: { value: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1 },
     }),
     [words.tex],
   )

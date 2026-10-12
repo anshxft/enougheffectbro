@@ -66,7 +66,7 @@ export default function About() {
         </p>
         <div
           aria-hidden
-          className="ab-bar pointer-events-none absolute top-1/2 left-1/2 h-[3px] w-[90vmin] -translate-x-1/2 -translate-y-1/2 bg-[linear-gradient(90deg,transparent,#2b3bff,#ff3cac,#ffb400,transparent)] opacity-80 blur-[0.5px]"
+          className="ab-bar pointer-events-none absolute top-1/2 left-1/2 h-[3px] w-[90vmin] -translate-x-1/2 -translate-y-1/2 bg-[linear-gradient(90deg,transparent,#8a8a8a,#ffffff,#8a8a8a,transparent)] opacity-80 blur-[0.5px]"
         />
 
         <p className="label relative text-bg/60!">/ About</p>

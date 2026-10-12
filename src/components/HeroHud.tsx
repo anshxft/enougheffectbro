@@ -17,6 +17,8 @@ export default function HeroHud() {
   useEffect(() => {
     let raf = 0
     const tick = () => {
+      raf = requestAnimationFrame(tick)
+      if (window.scrollY > window.innerHeight) return // hero gone: nothing to update
       hud.q.forEach((v, i) => {
         const el = quat.current[i]
         // ".42" style like a debug readout, but keep "1.00"
@@ -27,7 +29,6 @@ export default function HeroHud() {
       const color = '#' + hud.tint.map(toHex).join('')
       if (swatch.current) swatch.current.style.background = color
       if (hex.current) hex.current.textContent = color.toUpperCase()
-      raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
