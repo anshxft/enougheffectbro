@@ -4,6 +4,7 @@ export const site = {
   name: 'Ansh',
   tagline: 'Developer, designer & web3 builder. 18, coding since 12.',
   location: 'India',
+  status: 'just chilling',
   email: 'alanleader6267@gmail.com',
   socials: [
     { label: 'GitHub', href: 'https://github.com/anshxft' },

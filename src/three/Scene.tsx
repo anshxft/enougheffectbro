@@ -97,7 +97,8 @@ function Prism({ low }: { low: boolean }) {
     if (cp > 0) {
       // rise from below into the contact section, off to the side of the email on desktop
       const e = 1 - (1 - cp) ** 3
-      m.position.set(mobile ? 0 : viewport.width * 0.33, -viewport.height * 0.9 * (1 - e) + (mobile ? viewport.height * 0.2 : 0.15), 0)
+      // up beside the email / buttons, clear of the pressure wordmark below
+      m.position.set(mobile ? 0 : viewport.width * 0.35, -viewport.height * 0.9 * (1 - e) + viewport.height * (mobile ? 0.28 : 0.2), 0)
     } else {
       // drift up and recede as the hero scrolls away
       m.position.x += (0 - m.position.x) * k

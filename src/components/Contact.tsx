@@ -1,9 +1,12 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import { useGSAP } from '@gsap/react'
 import { site } from '../content'
+import PressureWordmark from './PressureWordmark'
+
+const LiquidLogo = lazy(() => import('./LiquidLogo'))
 
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
 
@@ -79,7 +82,7 @@ export default function Contact() {
         </h2>
       </div>
 
-      <div>
+      <div className="mt-16">
         <a href={`mailto:${site.email}`} className="ct-email display block text-[clamp(1.25rem,4.2vw,4rem)] normal-case transition-colors hover:text-accent">
           {/* two inline blocks so a narrow screen wraps at the @, never mid-word */}
           <span className="inline-block">{user}</span>
@@ -101,8 +104,17 @@ export default function Contact() {
         </div>
       </div>
 
-      <footer className="mt-24 flex flex-wrap justify-between gap-4 border-t border-grid pt-6">
-        <p className="label">© 2026 {site.name}</p>
+      <div className="mt-24">
+        <PressureWordmark text={site.name} />
+      </div>
+
+      <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-grid pt-6">
+        <div className="flex items-center gap-3">
+          <Suspense fallback={<span className="block h-14 w-[72px]" />}>
+            <LiquidLogo />
+          </Suspense>
+          <p className="label">© 2026 {site.name}</p>
+        </div>
         <p className="label">Built with React, three.js & GSAP · {site.location}</p>
       </footer>
     </section>
