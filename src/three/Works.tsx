@@ -4,6 +4,7 @@ import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { works, type Work } from '../content'
 import { input } from './input'
+import { ambient } from './palette'
 import screenVert from './shaders/screen.vert'
 import screenFrag from './shaders/screen.frag'
 
@@ -22,9 +23,11 @@ type ScreenProps = Omit<React.ComponentProps<'mesh'>, 'ref'> & {
   width: number
   bend: number
   segments: number
+  dim?: number
+  back?: boolean
 }
 
-function Screen({ mat, meshRef, width, bend, segments, ...rest }: ScreenProps) {
+function Screen({ mat, meshRef, width, bend, segments, dim = 1, back = false, ...rest }: ScreenProps) {
   const uniforms = useMemo(
     () => ({
       uTexA: { value: null as THREE.Texture | null },
@@ -35,8 +38,10 @@ function Screen({ mat, meshRef, width, bend, segments, ...rest }: ScreenProps) {
       uBend: { value: bend },
       uAspect: { value: ASPECT },
       uAccent: { value: ACCENT },
+      uDim: { value: dim },
+      uBack: { value: back ? 1 : 0 },
     }),
-    [bend],
+    [bend, dim, back],
   )
   return (
     <mesh ref={meshRef} {...rest}>
@@ -46,8 +51,10 @@ function Screen({ mat, meshRef, width, bend, segments, ...rest }: ScreenProps) {
   )
 }
 
-// One project: a big curved screen flanked by two small tilted cards, driven by its DOM section
-// (#work-<slug>): fades in block by block, switches screenshot every third of the scroll, fades out.
+// One project, driven by its DOM section (#work-<slug>): a big curved glass slab front and centre,
+// the next screenshot on a larger, steeper card half off the right edge, a small faded one on the
+// left. Fades in block by block, switches screenshot every third of the scroll, and hands the
+// current screenshot to the backdrop so the whole room takes on its colours.
 function WorkScene({ work }: { work: Work }) {
   const textures = useTexture(
     work.images.map((i) => i.src),
@@ -62,13 +69,15 @@ function WorkScene({ work }: { work: Work }) {
   const left = useRef<THREE.Mesh>(null)
   const right = useRef<THREE.Mesh>(null)
   const mainMat = useRef<THREE.ShaderMaterial>(null)
+  const backMat = useRef<THREE.ShaderMaterial>(null)
   const leftMat = useRef<THREE.ShaderMaterial>(null)
   const rightMat = useRef<THREE.ShaderMaterial>(null)
   const swap = useRef({ from: 0, to: 0, mix: 1 })
   const mobile = viewport.aspect < 0.8
 
-  const mainW = mobile ? viewport.width * 0.9 : Math.min(viewport.width * 0.5, viewport.height * 0.62 * ASPECT)
-  const sideW = mainW * 0.32
+  const mainW = mobile ? viewport.width * 0.84 : Math.min(viewport.width * 0.6, viewport.height * 0.74 * ASPECT)
+  const rightW = mainW * 0.62
+  const leftW = mainW * 0.3
   const n = textures.length
 
   useFrame((state, dt) => {
@@ -80,7 +89,10 @@ function WorkScene({ work }: { work: Work }) {
     const p = clamp01((vh - r.top) / (r.height + vh))
     const vis = smooth(0.02, 0.16, p) * (1 - smooth(0.86, 0.98, p))
     g.visible = vis > 0.001
-    if (!g.visible) return
+    if (!g.visible) {
+      if (ambient.owner === work.slug) ambient.amount = 0
+      return
+    }
 
     // which screenshot: thirds of the pinned stretch
     const idx = Math.min(n - 1, Math.floor(clamp01((p - 0.16) / 0.68) * n))
@@ -93,43 +105,51 @@ function WorkScene({ work }: { work: Work }) {
     s.mix = Math.min(1, s.mix + dt * 1.6)
     const t = state.clock.elapsedTime
 
-    if (mainMat.current) {
-      const m = mainMat.current.uniforms
+    ambient.owner = work.slug
+    ambient.tex = textures[s.to]
+    ambient.amount = vis
+
+    for (const ref of [mainMat, backMat]) {
+      const m = ref.current?.uniforms
+      if (!m) continue
       m.uTexA.value = textures[s.from]
       m.uTexB.value = textures[s.to]
       m.uMix.value = s.mix
       m.uReveal.value = vis
       m.uTime.value = t
     }
-    for (const [ref, off] of [[leftMat, 1], [rightMat, 2]] as const) {
+    for (const [ref, off] of [[rightMat, 1], [leftMat, 2]] as const) {
       const mat = ref.current
       if (!mat) continue
       const tex = textures[(s.to + off) % n]
       mat.uniforms.uTexA.value = tex
       mat.uniforms.uTexB.value = tex
+      mat.uniforms.uMix.value = 1 // no swap on the side cards: shader reads one texture
       mat.uniforms.uReveal.value = smooth(0.25, 1, vis)
       mat.uniforms.uTime.value = t
     }
 
     // drift through the viewport while pinned, lean towards the pointer
     const k = 1 - Math.exp(-dt * 4)
-    const targetX = mobile ? 0 : viewport.width * 0.1
-    const targetY = (0.5 - p) * viewport.height * 0.22 + (mobile ? viewport.height * 0.14 : 0.1)
+    const targetX = mobile ? 0 : viewport.width * 0.04
+    const targetY = (0.5 - p) * viewport.height * 0.16 + (mobile ? viewport.height * 0.14 : viewport.height * 0.06)
     g.position.x += (targetX - g.position.x) * k
     g.position.y += (targetY - g.position.y) * k
-    g.rotation.y += (input.pointer.x * 0.12 + (0.5 - p) * 0.3 - g.rotation.y) * k
-    g.rotation.x += (-input.pointer.y * 0.06 - g.rotation.x) * k
-    if (left.current) left.current.position.y = mainW * 0.12 + Math.sin(t * 0.7) * 0.06
-    if (right.current) right.current.position.y = -mainW * 0.14 + Math.sin(t * 0.6 + 2) * 0.06
+    g.rotation.y += (input.pointer.x * 0.1 + (0.5 - p) * 0.24 - g.rotation.y) * k
+    g.rotation.x += (-input.pointer.y * 0.05 - g.rotation.x) * k
+    if (right.current) right.current.position.y = -mainW * 0.02 + Math.sin(t * 0.6 + 2) * 0.05
+    if (left.current) left.current.position.y = mainW * 0.16 + Math.sin(t * 0.7) * 0.05
   })
 
   return (
     <group ref={group} visible={false}>
-      <Screen mat={mainMat} width={mainW} bend={0.06} segments={48} />
+      <Screen mat={mainMat} width={mainW} bend={0.05} segments={48} />
+      {/* backing plate a little behind: shows as the slab's thickness when it turns */}
+      <Screen mat={backMat} width={mainW * 1.005} bend={0.05} segments={48} back position-z={-0.12} />
       {!mobile && (
         <>
-          <Screen mat={leftMat} meshRef={left} width={sideW} bend={0.15} segments={16} position={[-(mainW / 2 + sideW * 0.55), 0, 0.4]} rotation-y={0.55} />
-          <Screen mat={rightMat} meshRef={right} width={sideW} bend={0.15} segments={16} position={[mainW / 2 + sideW * 0.55, 0, 0.4]} rotation-y={-0.55} />
+          <Screen mat={rightMat} meshRef={right} width={rightW} bend={0.22} segments={24} dim={0.8} position={[mainW / 2 + rightW * 0.42, 0, 0.9]} rotation-y={-0.85} />
+          <Screen mat={leftMat} meshRef={left} width={leftW} bend={0.15} segments={16} dim={0.45} position={[-(mainW / 2 + leftW * 0.35), 0, -0.6]} rotation-y={0.6} />
         </>
       )}
     </group>

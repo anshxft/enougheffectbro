@@ -86,21 +86,26 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-bg via-bg/70 to-transparent -mx-4 sm:-mx-8" aria-hidden />
-                <div className="relative max-w-xl">
-                  <p className="label">
-                    {String(i + 1).padStart(2, '0')} / {String(works.length).padStart(2, '0')} · {w.year}
-                  </p>
-                  <h3 id={`work-${w.slug}-title`} className="display mt-3 text-[clamp(2.5rem,8vw,7rem)]">
-                    {w.title}
-                  </h3>
-                  <ul className="mt-4 flex flex-wrap gap-2">
-                    {w.tags.map((t) => (
-                      <li key={t} className="label rounded-full border border-grid bg-bg/60 px-3 py-1">{t}</li>
-                    ))}
-                  </ul>
-                  <p className="mt-4 text-fg/80">{w.summary}</p>
-                  <TLink to={`/work/${w.slug}`} className="label mt-6 inline-flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-fg! transition-transform hover:scale-105">
-                    View case study →
+                <div className="relative flex flex-wrap items-end justify-between gap-6">
+                  <div className="max-w-xl">
+                    <p className="font-mono text-sm tracking-widest text-fg/80">
+                      {w.year} · {String(i + 1).padStart(2, '0')} / {String(works.length).padStart(2, '0')}
+                    </p>
+                    <h3 id={`work-${w.slug}-title`} className="mt-2 text-[clamp(2rem,4.2vw,4rem)] leading-tight font-medium tracking-tight">
+                      {w.title}
+                    </h3>
+                    <p className="mt-1 text-fg/80 sm:text-lg">{w.summary}</p>
+                    <ul className="mt-4 flex flex-wrap gap-2">
+                      {w.tags.map((t) => (
+                        <li key={t} className="rounded-sm border border-fg/40 bg-bg/50 px-2.5 py-1 font-mono text-xs tracking-wider">
+                          {t}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <TLink to={`/work/${w.slug}`} className="group inline-flex items-center gap-2 font-mono text-base tracking-widest sm:text-lg">
+                    <span className="border-b border-transparent transition-colors group-hover:border-fg">View case study</span>
+                    <span className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">↗</span>
                   </TLink>
                 </div>
               </div>

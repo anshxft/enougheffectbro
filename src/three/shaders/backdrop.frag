@@ -11,6 +11,8 @@ uniform vec3 uTint;
 uniform vec3 uTint2;
 uniform sampler2D uWords;
 uniform float uWordsAspect;
+uniform sampler2D uAmbient;
+uniform float uAmbientAmt;
 varying vec2 vWall;
 varying vec3 vWorld;
 
@@ -79,6 +81,14 @@ void main() {
   col += vec3(0.6) * plus * (0.08 + glow * 0.5);
   col += room * flick * (0.2 + glow * 0.6);
   col += mix(vec3(0.6), room, 0.4) * words * (0.03 + glow * 0.08);
+
+  // works on stage: the room takes on the screenshot's colours (a huge, heavily blurred copy of it
+  // behind everything, mip-biased for the blur), grid and markers stay on top
+  if (uAmbientAmt > 0.001) {
+    vec3 amb = texture2D(uAmbient, view / vec2(16.0, 10.0) + 0.5, 6.0).rgb;
+    vec3 lit = amb * (0.05 + glow * 0.3) * (1.0 - major * 0.45) + vec3(0.6) * plus * (0.06 + glow * 0.3);
+    col = mix(col, lit, uAmbientAmt * 0.85);
+  }
 
   // dark falloff towards the sides, top and bottom
   col *= 0.25 + 0.75 * pow(front, 1.8);

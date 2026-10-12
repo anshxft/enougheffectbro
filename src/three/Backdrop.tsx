@@ -3,13 +3,16 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { input } from './input'
 import { hud } from './fx'
-import { tint, tint2, updatePalette } from './palette'
+import { ambient, tint, tint2, updatePalette } from './palette'
 import vert from './shaders/backdrop.vert'
 import frag from './shaders/backdrop.frag'
 
 const RADIUS = 9
 // The camera (z=8) sits behind the dome's centre, so the far wall is ahead and the sides curve in.
 const CENTER = new THREE.Vector3(0, 0, 2)
+// stand-in for uAmbient until a works screenshot is on stage
+const BLACK = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1)
+BLACK.needsUpdate = true
 const WORDS = 'ANSH — DEVELOPER — DESIGNER — WEB3 — '
 
 // Outlined words drawn once into a canvas strip, once the display font has loaded.
@@ -68,6 +71,8 @@ export default function Backdrop() {
       uTint2: { value: tint2 },
       uWords: { value: words.tex },
       uWordsAspect: { value: 8 },
+      uAmbient: { value: BLACK },
+      uAmbientAmt: { value: 0 },
     }),
     [words.tex],
   )
@@ -81,6 +86,8 @@ export default function Backdrop() {
       u.uTime.value = t
       u.uScroll.value = input.scroll * 3
       u.uWordsAspect.value = words.aspect.current
+      u.uAmbient.value = ambient.tex ?? BLACK
+      u.uAmbientAmt.value = ambient.tex ? ambient.amount : 0
     }
     // tiny parallax: the tunnel turns a touch with the pointer
     if (mesh.current) mesh.current.rotation.y += (input.pointer.x * 0.05 - mesh.current.rotation.y) * (1 - Math.exp(-dt * 3))
