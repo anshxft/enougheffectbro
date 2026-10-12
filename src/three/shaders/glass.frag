@@ -68,14 +68,14 @@ void main() {
   vec3 col = mix(sharp, blurred, thick * 0.8);
 
   // tinted body, whitened frost, scratches
-  col *= mix(vec3(1.0), 0.55 + uTint * 1.5, 0.5);
-  col += (vec3(0.75) + uTint * 0.6) * thick * 0.22;
+  col *= mix(vec3(1.0), 0.55 + uTint * 1.5, 0.25);
+  col += (vec3(0.8) + uTint * 0.25) * thick * 0.22;
   col += streak * 0.3;
 
   float facing = max(dot(n, v), 0.0);
   float fresnel = pow(1.0 - facing, 3.0);
   vec3 film = rainbow(fresnel * 1.4 + dot(n, vec3(0.4, 0.8, 0.2)) * 0.6 + uTime * 0.04);
-  col = mix(col, film, fresnel * 0.45);
+  col = mix(col, film, fresnel * 0.28);
   col += vec3(0.9, 0.95, 1.0) * fresnel * fresnel * 0.9; // bright bevel rims
 
   vec3 r = reflect(-v, n);

@@ -52,6 +52,9 @@ void main() {
   float thick = max(fwidth(w.x), fwidth(w.y)) * 1.1;
   float plus = max(step(d.x, thick) * step(d.y, arm), step(d.y, thick) * step(d.x, arm));
 
+  // op-art: huge soft rings slowly rolling outward from a point low on the right
+  float rings = smoothstep(-0.25, 0.25, sin(length(view - vec2(4.5, -2.5)) * 1.15 - uTime * 0.35));
+
   vec2 cell = floor(p);
   float h = hash(cell);
   float flick = step(0.996, fract(h * 91.7 + floor(uTime * 0.8) * 0.137));
@@ -68,7 +71,9 @@ void main() {
 
   // lit wall: room colour across the screen, brightest straight ahead
   vec3 room = mix(uTint, uTint2, smoothstep(-0.5, 0.5, dir.x));
-  vec3 col = vec3(0.01, 0.011, 0.018) + room * (0.06 + glow * 0.42) + h * 0.008;
+  // same perceived brightness whatever the colour: silver would otherwise wash the wall out grey
+  room *= min(1.0, 0.11 / max(dot(room, vec3(0.2126, 0.7152, 0.0722)), 0.001));
+  vec3 col = vec3(0.01, 0.011, 0.014) + room * (0.05 + glow * 0.38) * (0.55 + rings * 0.9) + h * 0.008;
   col += (vec3(0.5) + room) * minor * (0.03 + glow * 0.1);
   col *= 1.0 - major * (0.35 + glow * 0.35); // heavy lines read dark on the lit wall
   col += vec3(0.6) * plus * (0.08 + glow * 0.5);
