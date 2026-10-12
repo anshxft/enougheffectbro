@@ -2,9 +2,8 @@ import * as THREE from 'three'
 
 // The scene's drifting light colour. Backdrop advances it once per frame; anything that should pick
 // up the room's colour (backdrop glow, glass tint) uses these same Color objects as uniform values.
-// Mostly monochrome (silver / graphite) for a premium feel, passing through steel blue and only
-// briefly the brand's electric blue.
-const PALETTE = ['#b8bcc4', '#8f99ab', '#c4c7cc', '#2b3bff'].map((c) => new THREE.Color(c))
+// Monochrome only (no blue): the room drifts between neutral silver and graphite tones.
+const PALETTE = ['#bfc0c2', '#98999c', '#d0d0d0', '#86878a'].map((c) => new THREE.Color(c))
 const HOLD = 7 // seconds per colour
 
 export const tint = PALETTE[0].clone() // main glow

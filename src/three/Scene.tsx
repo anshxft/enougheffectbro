@@ -33,9 +33,9 @@ function useGlyphGeometry() {
     const geo = new THREE.ExtrudeGeometry(shapes, {
       depth: 190,
       bevelEnabled: true,
-      bevelThickness: 46,
-      bevelSize: 26,
-      bevelSegments: 8,
+      bevelThickness: 16,
+      bevelSize: 9,
+      bevelSegments: 2,
       curveSegments: 24,
     })
     geo.center()

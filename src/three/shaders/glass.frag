@@ -65,7 +65,7 @@ void main() {
   sharp.g = texture2D(uScene, uv - off).g;
   sharp.b = texture2D(uScene, uv - off * 1.2).b;
   vec3 blurred = 0.5 * (texture2D(uScene, uv - off + vec2(0.012, 0.007)).rgb + texture2D(uScene, uv - off - vec2(0.009, 0.011)).rgb);
-  vec3 col = mix(sharp, blurred, thick * 0.8);
+  vec3 col = mix(sharp, blurred, thick * 0.4);
 
   // tinted body, whitened frost, scratches
   col *= mix(vec3(1.0), 0.55 + uTint * 1.5, 0.25);
