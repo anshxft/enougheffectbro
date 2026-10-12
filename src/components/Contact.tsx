@@ -75,7 +75,7 @@ export default function Contact() {
       <div>
         <p className="label mb-10">/ Contact</p>
         <h2 id="contact-title" className="ct-in max-w-xl text-2xl text-fg/80 sm:text-3xl">
-          Got an idea, a product or a role? Let's talk.
+          Building something on-chain, or hiring? Email me.
         </h2>
       </div>
 

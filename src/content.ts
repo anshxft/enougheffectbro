@@ -10,7 +10,7 @@ export const site = {
     { label: 'X', href: 'https://x.com/imalanxx' },
   ],
   about:
-    "I'm Ansh, an 18-year-old developer and designer from India. I wrote my first line of code at 12 and I've been building ever since. Right now I ship web3 products on Arc, like prediction markets and escrow, where real USDC moves through my contracts. I also trade crypto, which keeps me close to the people who actually use these products.",
+    "I'm Ansh, an 18-year-old developer and designer from India. I wrote my first line of code at 12 and I've been building ever since. Right now I ship web3 products on Arc, like prediction markets and escrow, where real USDC moves through my contracts. I also trade crypto.",
   skills: ['Dev', 'Design', 'Web3', 'Crypto trading'],
   // big statement in the About section, one entry per line
   aboutLead: ['I build on-chain', 'products where', 'real money moves.'],
@@ -73,7 +73,7 @@ export const works: Work[] = [
 ]
 
 export const services = [
-  { title: 'Dev', body: 'Full-stack web apps and smart contracts, from the contract tests to the last animation frame.' },
+  { title: 'Dev', body: 'Full-stack web apps and the smart contracts behind them, tested.' },
   { title: 'Design', body: 'Interfaces and brand for the products I build.' },
   { title: 'Web3', body: 'On-chain products on Arc: prediction markets, escrow, USDC payments.' },
 ]
