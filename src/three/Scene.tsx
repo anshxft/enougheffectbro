@@ -8,12 +8,11 @@ import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
 import { fx } from './fx'
 import { GLYPH_A } from './glyph-a'
 import { LensGlitchEffect } from './LensGlitch'
+import Backdrop from './Backdrop'
 import Works from './Works'
 import { input, listenInput } from './input'
 import glassVert from './shaders/glass.vert'
 import glassFrag from './shaders/glass.frag'
-import gridVert from './shaders/grid.vert'
-import gridFrag from './shaders/grid.frag'
 
 const Perf = lazy(() => import('r3f-perf').then((m) => ({ default: m.Perf })))
 
@@ -154,31 +153,6 @@ function ReadySignal({ onReady, frames = 12 }: { onReady?: () => void; frames?: 
   return null
 }
 
-function Grid() {
-  const mat = useRef<THREE.ShaderMaterial>(null)
-  const uniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uScroll: { value: 0 },
-      uCell: { value: 0.9 },
-      uBase: { value: new THREE.Color('#050505') },
-      uLine: { value: new THREE.Color('#202020') },
-      uAccent: { value: new THREE.Color(ACCENT) },
-    }),
-    [],
-  )
-  useFrame((state) => {
-    if (!mat.current) return
-    mat.current.uniforms.uTime.value = state.clock.elapsedTime
-    mat.current.uniforms.uScroll.value = input.scroll * 3
-  })
-  return (
-    <mesh position={[0, 0, -6]}>
-      <planeGeometry args={[80, 80]} />
-      <shaderMaterial ref={mat} vertexShader={gridVert} fragmentShader={gridFrag} uniforms={uniforms} />
-    </mesh>
-  )
-}
 
 // Which effects to run: /?fx=bcnv (bloom, chromatic aberration + glitch, noise, vignette), /?fx=0 for none.
 const fxFlags = flags.get('fx') ?? 'bcnv'
@@ -230,7 +204,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
           }}
         />
         <color attach="background" args={['#050505']} />
-        <Grid />
+        <Backdrop />
         <BackText />
         <Prism low={low} />
         <Suspense fallback={null}>
