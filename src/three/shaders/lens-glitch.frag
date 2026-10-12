@@ -3,6 +3,7 @@
 uniform float uAmount;
 uniform float uTime;
 uniform float uCA;
+uniform float uWave;
 uniform vec3 uAccent;
 
 float hash(vec2 p) {
@@ -17,6 +18,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   float on = step(0.0001, a);
   float t = floor(uTime * 14.0);
   vec2 st = uv;
+
+  // liquid wobble while the hero is on screen: two slow interfering waves nudge every pixel a few px,
+  // so letter edges look like they're melting
+  float wx = sin(uv.y * 34.0 + uTime * 1.9 + sin(uv.x * 9.0 + uTime * 0.7) * 2.0);
+  float wy = cos(uv.x * 27.0 - uTime * 1.5 + sin(uv.y * 7.0 - uTime * 0.6) * 2.0);
+  st += vec2(wx, wy) * 0.0016 * uWave;
 
   // blocks: grid size itself jumps between steps
   vec2 grid = vec2(16.0, 9.0) * (1.0 + floor(hash(vec2(t, 7.0)) * 3.0));

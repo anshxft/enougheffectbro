@@ -2,16 +2,15 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { input } from './input'
+import { hud } from './fx'
+import { tint, tint2, updatePalette } from './palette'
 import vert from './shaders/backdrop.vert'
 import frag from './shaders/backdrop.frag'
 
 const RADIUS = 9
-const HEIGHT = 80
-// The camera (z=8) sits behind the cylinder's axis, so the far wall is ahead and the sides curve in.
+// The camera (z=8) sits behind the dome's centre, so the far wall is ahead and the sides curve in.
 const CENTER = new THREE.Vector3(0, 0, 2)
 const WORDS = 'ANSH — DEVELOPER — DESIGNER — WEB3 — '
-// glow colours the tunnel drifts through, ~7s each
-const PALETTE = ['#2b3bff', '#6a2bff', '#0098a6', '#2b6bff'].map((c) => new THREE.Color(c))
 
 // Outlined words drawn once into a canvas strip, once the display font has loaded.
 function useWordsTexture() {
@@ -64,9 +63,9 @@ export default function Backdrop() {
       uScroll: { value: 0 },
       uCell: { value: 0.42 },
       uRadius: { value: RADIUS },
-      uHeight: { value: HEIGHT },
       uCenter: { value: CENTER },
-      uTint: { value: PALETTE[0].clone() },
+      uTint: { value: tint },
+      uTint2: { value: tint2 },
       uWords: { value: words.tex },
       uWordsAspect: { value: 8 },
     }),
@@ -75,15 +74,13 @@ export default function Backdrop() {
 
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime
+    updatePalette(t)
+    tint.toArray(hud.tint)
     if (mat.current) {
       const u = mat.current.uniforms
       u.uTime.value = t
       u.uScroll.value = input.scroll * 3
       u.uWordsAspect.value = words.aspect.current
-      const seg = (t / 7) % PALETTE.length
-      const i = Math.floor(seg)
-      const f = THREE.MathUtils.smoothstep(seg - i, 0.6, 1)
-      u.uTint.value.copy(PALETTE[i]).lerp(PALETTE[(i + 1) % PALETTE.length], f)
     }
     // tiny parallax: the tunnel turns a touch with the pointer
     if (mesh.current) mesh.current.rotation.y += (input.pointer.x * 0.05 - mesh.current.rotation.y) * (1 - Math.exp(-dt * 3))
@@ -91,7 +88,7 @@ export default function Backdrop() {
 
   return (
     <mesh ref={mesh} position={CENTER}>
-      <cylinderGeometry args={[RADIUS, RADIUS, HEIGHT, 160, 1, true]} />
+      <sphereGeometry args={[RADIUS, 160, 96]} />
       <shaderMaterial ref={mat} vertexShader={vert} fragmentShader={frag} uniforms={uniforms} side={THREE.BackSide} />
     </mesh>
   )

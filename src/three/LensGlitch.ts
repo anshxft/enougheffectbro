@@ -1,6 +1,7 @@
 import { Effect, EffectAttribute } from 'postprocessing'
 import { Color, Uniform, type WebGLRenderer, type WebGLRenderTarget } from 'three'
 import { fx } from './fx'
+import { input } from './input'
 import fragment from './shaders/lens-glitch.frag'
 
 // Replaces postprocessing's ChromaticAberration: one convolution effect doing lens CA + the glitch.
@@ -15,6 +16,7 @@ export class LensGlitchEffect extends Effect {
         ['uAmount', new Uniform(0)],
         ['uTime', new Uniform(0)],
         ['uCA', new Uniform(ca)],
+        ['uWave', new Uniform(1)],
         ['uAccent', new Uniform(new Color(accent))],
       ]),
     })
@@ -24,5 +26,7 @@ export class LensGlitchEffect extends Effect {
   update(_renderer: WebGLRenderer, _input: WebGLRenderTarget, dt?: number) {
     this.uniforms.get('uTime')!.value += dt ?? 0.016
     this.uniforms.get('uAmount')!.value = this.force ?? fx.glitch
+    // wobble fades out over the first screen of scrolling
+    this.uniforms.get('uWave')!.value = Math.max(0, 1 - input.scroll * 1.5)
   }
 }

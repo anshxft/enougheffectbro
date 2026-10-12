@@ -7,6 +7,14 @@ export const fx = {
   intro: 0, // 0..1 hero reveal (text flicker-in, prism pop)
 }
 
+// Live numbers for the hero HUD, written by the scene each frame. Plain numbers so the DOM side
+// doesn't need to import three.js.
+export const hud = {
+  q: [0, 0, 0, 1], // prism rotation quaternion
+  yaw: 0, // prism rotation around Y, radians
+  tint: [0, 0, 0], // room colour, 0..1 (linear)
+}
+
 let played = false
 export const introPlayed = () => played
 

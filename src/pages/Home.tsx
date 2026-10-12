@@ -6,6 +6,7 @@ import About from '../components/About'
 import Contact from '../components/Contact'
 import Experience from '../components/Experience'
 import Header from '../components/Header'
+import HeroHud from '../components/HeroHud'
 import Loader from '../components/Loader'
 import Services from '../components/Services'
 import Section from '../components/Section'
@@ -65,6 +66,7 @@ export default function Home() {
           >
             {site.name}
           </h1>
+          <HeroHud />
           <div ref={heroMeta} className="relative mt-6 flex flex-wrap items-end justify-between gap-4">
             <p className="max-w-md text-lg text-fg/80">{site.tagline}</p>
             <p className="label">Based in {site.location}</p>

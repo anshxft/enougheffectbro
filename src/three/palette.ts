@@ -1,0 +1,20 @@
+import * as THREE from 'three'
+
+// The scene's drifting light colour. Backdrop advances it once per frame; anything that should pick
+// up the room's colour (backdrop glow, glass tint) uses these same Color objects as uniform values.
+const PALETTE = ['#2b3bff', '#6a2bff', '#0098a6', '#2b6bff'].map((c) => new THREE.Color(c))
+const HOLD = 7 // seconds per colour
+
+export const tint = PALETTE[0].clone() // main glow
+export const tint2 = PALETTE[1].clone() // the colour coming next, used for the cross-screen gradient
+
+export function updatePalette(t: number) {
+  const seg = (t / HOLD) % PALETTE.length
+  const i = Math.floor(seg)
+  const f = THREE.MathUtils.smoothstep(seg - i, 0.6, 1)
+  const a = PALETTE[i]
+  const b = PALETTE[(i + 1) % PALETTE.length]
+  const c = PALETTE[(i + 2) % PALETTE.length]
+  tint.copy(a).lerp(b, f)
+  tint2.copy(b).lerp(c, f)
+}

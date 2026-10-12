@@ -5,9 +5,10 @@ import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocess
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
-import { fx } from './fx'
+import { fx, hud } from './fx'
 import { GLYPH_A } from './glyph-a'
 import { LensGlitchEffect } from './LensGlitch'
+import { tint } from './palette'
 import Backdrop from './Backdrop'
 import Works from './Works'
 import { input, listenInput } from './input'
@@ -18,6 +19,7 @@ const Perf = lazy(() => import('r3f-perf').then((m) => ({ default: m.Perf })))
 
 const ACCENT = '#2b3bff'
 const FONT = '/fonts/archivo-expanded-800.ttf'
+const TEXT_GLOW = new THREE.Color(1.15, 1.15, 1.2)
 // Debug flags: /?fx=0 no post-processing, /?perf=1 FPS panel, /?dpr=1 force pixel ratio, /?glitch=0.8 pin glitch strength.
 const flags = new URLSearchParams(window.location.search)
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches
@@ -29,11 +31,11 @@ function useGlyphGeometry() {
     const svg = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg"><path d="${GLYPH_A.path}"/></svg>`)
     const shapes = svg.paths.flatMap((p) => p.toShapes())
     const geo = new THREE.ExtrudeGeometry(shapes, {
-      depth: 130,
+      depth: 190,
       bevelEnabled: true,
-      bevelThickness: 24,
-      bevelSize: 14,
-      bevelSegments: 6,
+      bevelThickness: 46,
+      bevelSize: 26,
+      bevelSegments: 8,
       curveSegments: 24,
     })
     geo.center()
@@ -52,17 +54,20 @@ function Prism({ low }: { low: boolean }) {
   const still = useMemo(() => reducedMotion(), [])
   const scale = Math.min(viewport.width * (mobile ? 0.75 : 0.52), viewport.height * 0.9, 5.2)
   const pop = useRef(0)
+  const frame = useRef(0)
   // The glass re-renders the scene behind it every frame, so it only runs in the hero and the contact finale.
   const [onStage, setOnStage] = useState(true)
   // what the glass refracts: the scene without the prism, at reduced resolution
-  const fboScale = low ? 0.35 : 0.5
+  const fboScale = low ? 0.25 : 0.35
   const behind = useFBO(Math.round(size.width * fboScale), Math.round(size.height * fboScale), { samples: 0 })
   const uniforms = useMemo(
     () => ({
       uScene: { value: null as THREE.Texture | null },
       uResolution: { value: new THREE.Vector2(1, 1) },
       uTime: { value: 0 },
-      uRefract: { value: 0.022 },
+      uRefract: { value: 0.035 },
+      uBump: { value: 0.12 },
+      uTint: { value: tint },
     }),
     [],
   )
@@ -87,6 +92,8 @@ function Prism({ low }: { low: boolean }) {
     const targetX = -input.pointer.y * 0.3 + Math.sin(t * 0.4) * (still ? 0 : 0.08)
     m.rotation.y += (targetY - m.rotation.y) * k
     m.rotation.x += (targetX - m.rotation.x) * k
+    m.quaternion.toArray(hud.q)
+    hud.yaw = m.rotation.y
     if (cp > 0) {
       // rise from below into the contact section, off to the side of the email on desktop
       const e = 1 - (1 - cp) ** 3
@@ -99,11 +106,14 @@ function Prism({ low }: { low: boolean }) {
     }
 
     if (!onStage || !mat.current) return
-    m.visible = false
-    state.gl.setRenderTarget(behind)
-    state.gl.render(state.scene, state.camera)
-    state.gl.setRenderTarget(null)
-    m.visible = true
+    // the room behind changes slowly: refresh the refracted copy every other frame
+    if ((frame.current = (frame.current + 1) % 2) === 0) {
+      m.visible = false
+      state.gl.setRenderTarget(behind)
+      state.gl.render(state.scene, state.camera)
+      state.gl.setRenderTarget(null)
+      m.visible = true
+    }
     const u = mat.current.uniforms
     u.uScene.value = behind.texture
     state.gl.getDrawingBufferSize(u.uResolution.value)
@@ -137,8 +147,10 @@ function BackText() {
 
   return (
     <group ref={ref} position={[0, 0, z]}>
-      <Text ref={text} fillOpacity={0} font={FONT} fontSize={size} letterSpacing={-0.02} anchorX="center" anchorY="middle" color="#e4e4e4">
+      <Text ref={text} fillOpacity={0} font={FONT} fontSize={size} letterSpacing={-0.02} anchorX="center" anchorY="middle">
         ANSH
+        {/* brighter than white and not tone-mapped, so the letters cross the bloom threshold and glow */}
+        <meshBasicMaterial attach="material" color={TEXT_GLOW} toneMapped={false} />
       </Text>
     </group>
   )
@@ -162,9 +174,9 @@ function Effects() {
   const lens = useMemo(() => new LensGlitchEffect(ACCENT, flags.has('glitch') ? Number(flags.get('glitch')) : undefined), [])
   return (
     <EffectComposer multisampling={0} frameBufferType={THREE.UnsignedByteType}>
-      <>{fxFlags.includes('b') && <Bloom mipmapBlur levels={5} resolutionScale={0.5} intensity={0.5} radius={0.6} luminanceThreshold={0.92} luminanceSmoothing={0.05} />}</>
+      <>{fxFlags.includes('b') && <Bloom mipmapBlur levels={5} resolutionScale={0.5} intensity={0.85} radius={0.7} luminanceThreshold={0.8} luminanceSmoothing={0.15} />}</>
       <>{fxFlags.includes('c') && <primitive object={lens} />}</>
-      <>{fxFlags.includes('n') && <Noise premultiply opacity={0.35} blendFunction={BlendFunction.ADD} />}</>
+      <>{fxFlags.includes('n') && <Noise premultiply opacity={0.15} blendFunction={BlendFunction.ADD} />}</>
       <>{fxFlags.includes('v') && <Vignette darkness={0.65} offset={0.3} />}</>
     </EffectComposer>
   )
