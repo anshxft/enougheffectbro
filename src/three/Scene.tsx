@@ -191,7 +191,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
   const [dpr, setDpr] = useState(maxDpr)
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
+    <div className="pointer-events-none fixed top-0 left-0 z-0 h-lvh w-full" aria-hidden>
       <Canvas
         dpr={dpr}
         gl={{ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: import.meta.env.DEV }}

@@ -33,7 +33,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
   }, [onClose])
 
   return (
-    <div ref={sheet} id="mobile-menu" role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-[60] flex flex-col justify-between bg-bg px-4 pt-24 pb-8">
+    <div ref={sheet} id="mobile-menu" role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-[60] flex flex-col justify-between overscroll-contain bg-bg px-4 pt-24 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
       <nav aria-label="Menu" className="flex flex-col gap-2">
         {nav.map((n, i) => (
           <span key={n.href} className="overflow-hidden">
@@ -61,7 +61,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-[70] flex items-center justify-between px-4 py-4 mix-blend-difference sm:px-8">
+      <header className="fixed inset-x-0 top-0 z-[70] flex items-center justify-between px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 mix-blend-difference select-none sm:px-8">
         <TLink to="/" className="display inline-flex min-h-11 items-center text-lg" aria-label={`${site.name}, home`}>
           {site.name}
         </TLink>

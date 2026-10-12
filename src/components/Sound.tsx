@@ -71,7 +71,7 @@ export function SoundPrompt() {
     setAsk(false)
   }
   return (
-    <div role="dialog" aria-label="Sound" className="fixed inset-x-4 bottom-4 z-[90] flex flex-wrap items-center justify-between gap-3 rounded-full border border-grid bg-bg py-2 pr-2 pl-5 sm:inset-x-auto sm:right-8 sm:bottom-8">
+    <div role="dialog" aria-label="Sound" className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[90] flex flex-wrap items-center justify-between gap-3 rounded-full border border-grid bg-bg py-2 pr-2 pl-5 sm:inset-x-auto sm:right-8 sm:bottom-8">
       <p className="label text-fg!">This site has sound. Turn it on?</p>
       <div className="flex gap-2">
         <button type="button" onClick={() => choose(true)} className="label rounded-full bg-accent px-4 py-2 text-fg!">

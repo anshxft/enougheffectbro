@@ -4,6 +4,8 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
+// mobile URL bar showing/hiding resizes the viewport; don't recompute every pinned section for it
+ScrollTrigger.config({ ignoreMobileResize: true })
 
 export const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 

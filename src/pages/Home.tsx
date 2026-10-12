@@ -60,7 +60,7 @@ export default function Home() {
       {loading && <Loader ready={webgl || timedOut} onDone={finishLoading} />}
       <Header />
       <main id="content" tabIndex={-1} className="relative z-10 outline-none">
-        <section id="top" className="relative flex min-h-dvh flex-col justify-end px-4 pb-10 sm:px-8">
+        <section id="top" className="relative flex min-h-svh flex-col justify-end px-4 pb-10 sm:px-8">
           <h1
             className={`display absolute inset-0 flex items-center justify-center text-[clamp(4rem,24vw,24rem)] transition-opacity duration-700 ${webgl ? 'opacity-0' : ''}`}
           >

@@ -71,7 +71,7 @@ export default function Contact() {
   }
 
   return (
-    <section ref={root} id="contact" aria-labelledby="contact-title" className="relative flex min-h-dvh flex-col justify-between px-4 pt-32 pb-8 sm:px-8">
+    <section ref={root} id="contact" aria-labelledby="contact-title" className="relative flex min-h-svh flex-col justify-between px-4 pt-32 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] sm:px-8">
       <div>
         <p className="label mb-10">/ Contact</p>
         <h2 id="contact-title" className="ct-in max-w-xl text-2xl text-fg/80 sm:text-3xl">
