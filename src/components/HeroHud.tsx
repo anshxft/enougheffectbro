@@ -37,7 +37,7 @@ export default function HeroHud() {
   return (
     <div id="hero-hud" aria-hidden className="pointer-events-none absolute top-24 right-8 hidden w-44 flex-col items-end gap-5 lg:flex">
       <div className="text-right">
-        <p className="label mb-1.5">A / Rotation</p>
+        <p className="label mb-1.5">Loop / Rotation</p>
         <p className="flex gap-2 font-mono text-[11px] text-fg/80 tabular-nums">
           {['x', 'y', 'z', 'w'].map((axis, i) => (
             <span key={axis} className="border-l border-fg/25 pl-1.5">

@@ -4,9 +4,8 @@ import { PerformanceMonitor, Text, useFBO } from '@react-three/drei'
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
-import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
 import { fx, hud } from './fx'
-import { GLYPH_A } from './glyph-a'
+import { createMobiusGeometry } from './mobius'
 import { LensGlitchEffect } from './LensGlitch'
 import { tint } from './palette'
 import Backdrop from './Backdrop'
@@ -26,30 +25,10 @@ const flags = new URLSearchParams(window.location.search)
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-// Extruded "A" from the real Archivo glyph, centred, ~1 unit tall.
-function useGlyphGeometry() {
-  return useMemo(() => {
-    const svg = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg"><path d="${GLYPH_A.path}"/></svg>`)
-    const shapes = svg.paths.flatMap((p) => p.toShapes())
-    const geo = new THREE.ExtrudeGeometry(shapes, {
-      depth: 190,
-      bevelEnabled: true,
-      bevelThickness: 16,
-      bevelSize: 9,
-      bevelSegments: 2,
-      curveSegments: 24,
-    })
-    geo.center()
-    geo.scale(1 / GLYPH_A.unitsPerEm, 1 / GLYPH_A.unitsPerEm, 1 / GLYPH_A.unitsPerEm)
-    geo.computeVertexNormals()
-    return geo
-  }, [])
-}
-
 function Prism({ low }: { low: boolean }) {
   const ref = useRef<THREE.Mesh>(null)
   const mat = useRef<THREE.ShaderMaterial>(null)
-  const geo = useGlyphGeometry()
+  const geo = useMemo(() => createMobiusGeometry(), [])
   const { viewport, size } = useThree()
   const mobile = useMemo(() => isMobile(), [])
   const still = useMemo(() => reducedMotion(), [])
@@ -94,7 +73,8 @@ function Prism({ low }: { low: boolean }) {
     // idle sway, plus one full turn across the interlude while the words sweep past behind it
     const turn = THREE.MathUtils.smoothstep(sp, 0.04, 0.9) * Math.PI * 2
     const targetY = (still ? 0 : Math.sin(t * 0.35) * 0.55) + turn + input.pointer.x * 0.35 + (1 - p) * Math.PI * 2
-    const targetX = -input.pointer.y * 0.3 + Math.sin(t * 0.4) * (still ? 0 : 0.08) + Math.sin(turn / 2) * 0.25
+    // resting tilt so the loop reads in 3D (you see its depth and the twist), not as a flat ring
+    const targetX = 0.42 - input.pointer.y * 0.3 + Math.sin(t * 0.4) * (still ? 0 : 0.08) + Math.sin(turn / 2) * 0.25
     m.rotation.y += (targetY - m.rotation.y) * k
     m.rotation.x += (targetX - m.rotation.x) * k
     m.quaternion.toArray(hud.q)

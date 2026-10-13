@@ -1,28 +1,34 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import gsap from 'gsap'
-import { GLYPH_A } from '../three/glyph-a'
 import { lockScroll, prefersReducedMotion } from '../lib/smooth-scroll'
 import { playIntro } from '../three/fx'
 
 type P = [number, number]
-// Construction lines in glyph units (y up): guides through the A's edges, extended far past the screen.
-const extend = (a: P, b: P, k = 14): [P, P] => [
-  [a[0] + (a[0] - b[0]) * k, a[1] + (a[1] - b[1]) * k],
-  [b[0] + (b[0] - a[0]) * k, b[1] + (b[1] - a[1]) * k],
-]
+// Loader drawing in the old glyph's coordinate box (y up): the loop's silhouette, a ring centred at
+// C with outer radius RO and inner radius RI, plus construction lines through it.
+const C: P = [466, 344]
+const RO = 360
+const RI = 205
+const circle = (r: number) => `M${C[0] - r} ${C[1]}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`
+const RING = circle(RO) + circle(RI)
 const FAR = 6000
+const diag = (deg: number): [P, P] => {
+  const a = (deg * Math.PI) / 180
+  return [
+    [C[0] - Math.cos(a) * FAR, C[1] - Math.sin(a) * FAR],
+    [C[0] + Math.cos(a) * FAR, C[1] + Math.sin(a) * FAR],
+  ]
+}
 const LINES: [P, P][] = [
-  ...[0, 110, 259, 523, 687].map((y): [P, P] => [[-FAR, y], [FAR, y]]),
-  ...[353, 466, 579].map((x): [P, P] => [[x, -FAR], [x, FAR]]),
-  extend([15, 0], [353, 687]),
-  extend([917, 0], [579, 687]),
-  extend([344.7, 259], [458, 523]),
-  extend([577.3, 259], [465.5, 523]),
+  ...[C[1] - RO, C[1] - RI, C[1], C[1] + RI, C[1] + RO].map((y): [P, P] => [[-FAR, y], [FAR, y]]),
+  ...[C[0] - RO, C[0], C[0] + RO].map((x): [P, P] => [[x, -FAR], [x, FAR]]),
+  diag(30),
+  diag(-30),
 ]
 const VIEW = { x: -420, y: -1050, w: 1773, h: 1413 }
 
-// Full-screen intro: guides draw, the A outline traces itself, a counter runs until the WebGL
-// scene has rendered (`ready`), then the A flashes solid and the screen dissolves in blocks.
+// Full-screen intro: guides draw, the loop's ring outline traces itself, a counter runs until the WebGL
+// scene has rendered (`ready`), then the ring fills and the screen dissolves in blocks.
 export default function Loader({ ready, onDone }: { ready: boolean; onDone: () => void }) {
   const root = useRef<HTMLDivElement>(null)
   const counter = useRef<HTMLSpanElement>(null)
@@ -104,7 +110,7 @@ export default function Loader({ ready, onDone }: { ready: boolean; onDone: () =
           {LINES.map(([a, b], i) => (
             <line key={i} className="ld-line" x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} pathLength={1} strokeDasharray={1} strokeOpacity={0.2} strokeWidth={stroke} />
           ))}
-          <path className="ld-a" d={GLYPH_A.path} pathLength={1} strokeDasharray={1} fill="#f2f2f2" fillOpacity={0} strokeWidth={stroke * 1.5} />
+          <path className="ld-a" d={RING} fillRule="evenodd" pathLength={1} strokeDasharray={1} fill="#f2f2f2" fillOpacity={0} strokeWidth={stroke * 1.5} />
         </g>
       </svg>
 
