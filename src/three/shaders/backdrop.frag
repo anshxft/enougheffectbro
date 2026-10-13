@@ -55,11 +55,13 @@ void main() {
   float thick = max(fwidth(w.x), fwidth(w.y)) * 0.9;
   float plus = max(step(d.x, thick) * step(d.y, arm), step(d.y, thick) * step(d.x, arm));
 
-  // op-art swirl: bold black/white bands spiralling out from a point right of centre, bent by a
-  // slow wobble so they read as warped, not geometric
-  vec2 sc = view - vec2(1.8, -0.6);
-  float wob = sin(view.x * 0.42 + uTime * 0.11 * uMotion) * 1.3 + sin(view.y * 0.55 - uTime * 0.08 * uMotion) * 1.0;
-  float bands = sin(length(sc * vec2(1.0, 1.2)) * 3.4 + atan(sc.y, sc.x) * 2.0 + wob - uTime * 0.45 * uMotion);
+  // op-art swirl: bold black/white bands spiralling out from a centre that drifts around on a slow
+  // figure-eight while the whole spiral turns, bent by a wobble so they read as warped, not geometric
+  float tm = uTime * uMotion;
+  vec2 centre = vec2(1.8 + sin(tm * 0.13) * 1.6, -0.6 + sin(tm * 0.21) * 1.0);
+  vec2 sc = view - centre;
+  float wob = sin(view.x * 0.42 + tm * 0.23) * 1.5 + sin(view.y * 0.55 - tm * 0.17) * 1.2;
+  float bands = sin(length(sc * vec2(1.0, 1.2)) * 3.4 + atan(sc.y, sc.x) * 2.0 + wob - tm * 0.45 + sin(tm * 0.09) * 2.0);
   float stripe = smoothstep(0.28, 0.48, bands); // narrow light bands, mostly black
 
   vec2 cell = floor(p);
@@ -80,17 +82,18 @@ void main() {
   // wall: near-black and light-grey bands, each panel a touch different, tinted by the room colour
   vec3 room = mix(uTint, uTint2, smoothstep(-0.5, 0.5, dir.x));
   room /= max(max(room.r, room.g), max(room.b, 0.001)); // hue only; brightness comes from the bands
-  float light = mix(0.018, 0.3, stripe) * (0.88 + panel * 0.12);
-  vec3 col = room * light;
+  // light bands are a clean, slightly cool white kept just under the bloom threshold
+  float light = mix(0.018, 0.62, stripe) * (0.9 + panel * 0.1);
+  vec3 col = mix(room, vec3(0.96, 0.98, 1.0), stripe) * light;
   col = mix(col, vec3(0.06), minor * 0.4);          // fine grid: dark on white bands, faint on black
   col *= 1.0 - major * 0.9;                          // heavy panel seams
   col += vec3(0.5) * plus * 0.35;
   col += vec3(0.5) * flick * 0.25;
   col += vec3(0.55) * words * (1.0 - stripe * 0.6) * 0.07;
 
-  // LED dot texture: the wall reads like a screen up close
-  float dots = length(fract(gl_FragCoord.xy / 3.0) - 0.5);
-  col *= 0.86 + 0.14 * smoothstep(0.5, 0.2, dots);
+  // LED dot texture: the wall reads like a screen up close, strongest on the white bands
+  float dots = smoothstep(0.5, 0.2, length(fract(gl_FragCoord.xy / 3.0) - 0.5));
+  col *= mix(0.86 + 0.14 * dots, 0.68 + 0.32 * dots, stripe);
 
   // works on stage: the room takes on the screenshot's colours (a huge, heavily blurred copy of it
   // behind everything, mip-biased for the blur), grid and markers stay on top
@@ -102,5 +105,7 @@ void main() {
 
   // dark falloff towards the sides, top and bottom
   col *= 0.12 + 0.88 * pow(front, 2.0);
+  // darker strips along the top and bottom of the view so the header and hero captions stay legible
+  col *= 1.0 - 0.75 * smoothstep(0.17, 0.29, abs(dir.y));
   gl_FragColor = vec4(col, 1.0);
 }
