@@ -84,6 +84,10 @@
   0%, 100% { transform: scaleY(0.3); }
   50% { transform: scaleY(1); }
 }
+/* journey page: mist banks drift sideways (the band is 200% wide, so -50% loops seamlessly) */
+@keyframes mist {
+  to { transform: translateX(-50%); }
+}
 
 /* set by <Cursor> only while the custom cursor is running */
 html.custom-cursor,

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, type AnchorHTMLAttributes, type MouseEvent, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, type ComponentProps, type MouseEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import gsap from 'gsap'
 import { lockScroll, prefersReducedMotion, scrollToTarget } from '../lib/smooth-scroll'
@@ -75,7 +75,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
 }
 
 // Internal link that goes through the block transition (new-tab clicks still behave normally).
-export function TLink({ to, onClick, ...rest }: { to: string } & AnchorHTMLAttributes<HTMLAnchorElement>) {
+export function TLink({ to, onClick, ...rest }: { to: string } & ComponentProps<'a'>) {
   const go = useGo()
   const click = (e: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(e)
