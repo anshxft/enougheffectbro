@@ -116,6 +116,12 @@ function WorkView({ slug }: { slug?: string }) {
 
         <p className="wk-up mt-24 max-w-3xl bg-bg text-2xl leading-snug sm:text-4xl">{work.summary}</p>
 
+        {work.devices && (
+          <figure className="wk-shot mt-24 mix-blend-screen">
+            <img src={work.devices.src} alt={work.devices.alt} width={1024} height={637} loading="lazy" className="mx-auto block w-full max-w-5xl" />
+          </figure>
+        )}
+
         <div className="mt-24 space-y-10 sm:space-y-16">
           {work.images.map((img, i) => (
             <figure key={img.src}>

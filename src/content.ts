@@ -30,6 +30,8 @@ export type Work = {
   images: { src: string; alt: string }[]
   // case-study hero: a product shot, optionally a short film (muted loop) that uses it as fallback
   hero: { image: string; film?: string; poster?: string; alt: string }
+  // laptop + phone product shot shown after the summary
+  devices?: { src: string; alt: string }
 }
 
 export const works: Work[] = [
@@ -47,6 +49,10 @@ export const works: Work[] = [
       'AI market briefs and per-market share images',
     ],
     tech: ['Solidity', 'Hardhat', 'React 19', 'Vite', 'Tailwind 4', 'viem', 'GSAP', 'Lenis', 'Vercel Functions'],
+    devices: {
+      src: '/works/predictarc-devices.webp',
+      alt: 'PredictArc fresh predictions and activity feed on a laptop and a phone',
+    },
     hero: {
       image: '/works/predictarc-mockup.webp',
       film: '/works/predictarc-film.mp4',
@@ -75,7 +81,13 @@ export const works: Work[] = [
     tech: ['Solidity', 'Foundry', 'OpenZeppelin', 'Next.js', 'wagmi', 'viem', 'Groq'],
     hero: {
       image: '/works/heldby-mockup.webp',
-      alt: 'Heldby landing page on a laptop floating in a dark studio',
+      film: '/works/heldby-film.mp4',
+      poster: '/works/heldby-film-poster.webp',
+      alt: 'Heldby landing page on a floating tablet turning in a dark studio',
+    },
+    devices: {
+      src: '/works/heldby-devices.webp',
+      alt: 'Heldby feature list on a laptop and a phone',
     },
     images: [
       { src: '/works/heldby-1.webp', alt: 'Heldby landing page: Money held in trust, released when work is done, with a 250 USDC escrow card' },
