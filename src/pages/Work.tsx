@@ -94,7 +94,9 @@ function WorkView({ slug }: { slug?: string }) {
           </ul>
         </div>
 
-        <figure className="wk-shot mt-20 overflow-hidden rounded-2xl border border-grid bg-black">
+        {/* product shot on pure black, screen-blended so it floats on the page grid instead of sitting in a box.
+            The blend sits on the figure: its scroll clip-path makes it the group that meets the page. */}
+        <figure className="wk-shot mt-20 mix-blend-screen">
           {work.hero.film && !still ? (
             <video
               src={work.hero.film}
