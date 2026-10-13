@@ -20,7 +20,7 @@ const Perf = lazy(() => import('r3f-perf').then((m) => ({ default: m.Perf })))
 
 const ACCENT = '#2b3bff'
 const FONT = '/fonts/archivo-expanded-800.ttf'
-const TEXT_GLOW = new THREE.Color(1.15, 1.15, 1.2)
+const TEXT_GLOW = new THREE.Color(0.97, 0.97, 1.0)
 // Debug flags: /?fx=0 no post-processing, /?perf=1 FPS panel, /?dpr=1 force pixel ratio, /?glitch=0.8 pin glitch strength.
 const flags = new URLSearchParams(window.location.search)
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches
@@ -176,7 +176,7 @@ function Effects() {
   const lens = useMemo(() => new LensGlitchEffect(ACCENT, flags.has('glitch') ? Number(flags.get('glitch')) : undefined), [])
   return (
     <EffectComposer multisampling={0} frameBufferType={THREE.UnsignedByteType}>
-      <>{fxFlags.includes('b') && <Bloom mipmapBlur levels={5} resolutionScale={0.5} intensity={0.85} radius={0.7} luminanceThreshold={0.8} luminanceSmoothing={0.15} />}</>
+      <>{fxFlags.includes('b') && <Bloom mipmapBlur levels={5} resolutionScale={0.5} intensity={0.55} radius={0.6} luminanceThreshold={0.8} luminanceSmoothing={0.15} />}</>
       <>{fxFlags.includes('c') && <primitive object={lens} />}</>
       <>{fxFlags.includes('n') && <Noise premultiply opacity={0.15} blendFunction={BlendFunction.ADD} />}</>
       <>{fxFlags.includes('v') && <Vignette darkness={0.65} offset={0.3} />}</>
