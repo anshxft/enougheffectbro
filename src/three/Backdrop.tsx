@@ -13,6 +13,12 @@ const CENTER = new THREE.Vector3(0, 0, 2)
 // stand-in for uAmbient until a works screenshot is on stage
 const BLACK = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1)
 BLACK.needsUpdate = true
+const PATTERNS = 6 // see wallPattern in backdrop.frag
+const PATTERN_HOLD = 9 // seconds on each pattern
+const PATTERN_FADE = 2.5 // seconds crossfading into the next
+const wallFlag = new URLSearchParams(window.location.search).get('wall')
+const PINNED = wallFlag === null ? null : Number(wallFlag)
+const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const WORDS = 'ANSH — DEVELOPER — DESIGNER — WEB3 — '
 
 // Outlined words drawn once into a canvas strip, once the display font has loaded.
@@ -73,7 +79,10 @@ export default function Backdrop() {
       uWordsAspect: { value: 8 },
       uAmbient: { value: BLACK },
       uAmbientAmt: { value: 0 },
-      uMotion: { value: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1 },
+      uMotion: { value: still ? 0 : 1 },
+      uPatternA: { value: 0 },
+      uPatternB: { value: 1 },
+      uPatternMix: { value: 0 },
     }),
     [words.tex],
   )
@@ -89,6 +98,20 @@ export default function Backdrop() {
       u.uWordsAspect.value = words.aspect.current
       u.uAmbient.value = ambient.tex ?? BLACK
       u.uAmbientAmt.value = ambient.tex ? ambient.amount : 0
+      // wall pattern cycle: hold each for PATTERN_HOLD s, crossfade over PATTERN_FADE s.
+      // /?wall=N pins one (debug); reduced motion stays on the calm topographic lines.
+      const pinned = PINNED ?? (still ? 2 : null)
+      if (pinned !== null) {
+        u.uPatternA.value = pinned
+        u.uPatternMix.value = 0
+      } else {
+        const cycle = PATTERN_HOLD + PATTERN_FADE
+        const i = Math.floor(t / cycle)
+        const f = t - i * cycle
+        u.uPatternA.value = i % PATTERNS
+        u.uPatternB.value = (i + 1) % PATTERNS
+        u.uPatternMix.value = THREE.MathUtils.smoothstep(f, PATTERN_HOLD, cycle)
+      }
     }
     // tiny parallax: the tunnel turns a touch with the pointer
     if (mesh.current) mesh.current.rotation.y += (input.pointer.x * 0.05 - mesh.current.rotation.y) * (1 - Math.exp(-dt * 3))
