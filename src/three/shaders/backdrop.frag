@@ -46,20 +46,25 @@ void main() {
   vec2 p = w / uCell;
 
   float minor = gridLine(p, 1.0);
-  float major = gridLine(p / 4.0, 2.2);
+  float major = gridLine(p / 4.0, 3.0);
 
-  // "+" markers on major crossings
+  // "+" markers on major crossings, small and quiet
   float big = uCell * 4.0;
   vec2 d = abs(fract(w / big + 0.5) - 0.5) * big;
-  float arm = uCell * 0.3;
-  float thick = max(fwidth(w.x), fwidth(w.y)) * 1.1;
+  float arm = uCell * 0.16;
+  float thick = max(fwidth(w.x), fwidth(w.y)) * 0.9;
   float plus = max(step(d.x, thick) * step(d.y, arm), step(d.y, thick) * step(d.x, arm));
 
-  // op-art: huge soft rings slowly rolling outward from a point low on the right
-  float rings = smoothstep(-0.25, 0.25, sin(length(view - vec2(4.5, -2.5)) * 1.15 - uTime * 0.35 * uMotion));
+  // op-art swirl: bold black/white bands spiralling out from a point right of centre, bent by a
+  // slow wobble so they read as warped, not geometric
+  vec2 sc = view - vec2(1.8, -0.6);
+  float wob = sin(view.x * 0.42 + uTime * 0.11 * uMotion) * 1.3 + sin(view.y * 0.55 - uTime * 0.08 * uMotion) * 1.0;
+  float bands = sin(length(sc * vec2(1.0, 1.2)) * 3.4 + atan(sc.y, sc.x) * 2.0 + wob - uTime * 0.45 * uMotion);
+  float stripe = smoothstep(0.28, 0.48, bands); // narrow light bands, mostly black
 
   vec2 cell = floor(p);
   float h = hash(cell);
+  float panel = hash(floor(p / 4.0));
   float flick = step(0.996, fract(h * 91.7 + floor(uTime * 0.8) * 0.137));
 
   // words: rows of outlined text around the wall, every other row running the other way
@@ -72,16 +77,20 @@ void main() {
   // seen from inside the dome the strip runs mirrored, so flip X
   float words = wuv.y > 0.0 && wuv.y < 1.0 ? texture2D(uWords, vec2(1.0 - wuv.x, wuv.y)).a : 0.0;
 
-  // lit wall: room colour across the screen, brightest straight ahead
+  // wall: near-black and light-grey bands, each panel a touch different, tinted by the room colour
   vec3 room = mix(uTint, uTint2, smoothstep(-0.5, 0.5, dir.x));
-  // same perceived brightness whatever the colour: silver would otherwise wash the wall out grey
-  room *= min(1.0, 0.11 / max(dot(room, vec3(0.2126, 0.7152, 0.0722)), 0.001));
-  vec3 col = vec3(0.01, 0.011, 0.014) + room * (0.05 + glow * 0.38) * (0.55 + rings * 0.9) + h * 0.008;
-  col += (vec3(0.5) + room) * minor * (0.03 + glow * 0.1);
-  col *= 1.0 - major * (0.35 + glow * 0.35); // heavy lines read dark on the lit wall
-  col += vec3(0.6) * plus * (0.08 + glow * 0.5);
-  col += room * flick * (0.2 + glow * 0.6);
-  col += mix(vec3(0.6), room, 0.4) * words * (0.03 + glow * 0.08);
+  room /= max(max(room.r, room.g), max(room.b, 0.001)); // hue only; brightness comes from the bands
+  float light = mix(0.018, 0.3, stripe) * (0.88 + panel * 0.12);
+  vec3 col = room * light;
+  col = mix(col, vec3(0.06), minor * 0.4);          // fine grid: dark on white bands, faint on black
+  col *= 1.0 - major * 0.9;                          // heavy panel seams
+  col += vec3(0.5) * plus * 0.35;
+  col += vec3(0.5) * flick * 0.25;
+  col += vec3(0.55) * words * (1.0 - stripe * 0.6) * 0.07;
+
+  // LED dot texture: the wall reads like a screen up close
+  float dots = length(fract(gl_FragCoord.xy / 3.0) - 0.5);
+  col *= 0.86 + 0.14 * smoothstep(0.5, 0.2, dots);
 
   // works on stage: the room takes on the screenshot's colours (a huge, heavily blurred copy of it
   // behind everything, mip-biased for the blur), grid and markers stay on top
@@ -92,6 +101,6 @@ void main() {
   }
 
   // dark falloff towards the sides, top and bottom
-  col *= 0.25 + 0.75 * pow(front, 1.8);
+  col *= 0.12 + 0.88 * pow(front, 2.0);
   gl_FragColor = vec4(col, 1.0);
 }
