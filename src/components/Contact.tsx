@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
@@ -41,6 +41,27 @@ function Magnetic({ children, strength = 0.35 }: { children: ReactNode; strength
   )
 }
 
+// Ansh's local time in India, ticking each minute, with a guess at what he's doing at that hour.
+function LocalTime() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 15000)
+    return () => clearInterval(id)
+  }, [])
+  const time = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })
+  const hour = Number(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hourCycle: 'h23' }))
+  const status = site.hours.find((h) => hour < h.until)!.status
+  return (
+    <p className="ct-in label mt-4 flex items-center gap-2 text-fg/80!">
+      <span aria-hidden className="relative flex size-2">
+        <span className="absolute inset-0 rounded-full bg-fg/60 motion-safe:animate-ping" />
+        <span className="relative size-2 rounded-full bg-fg" />
+      </span>
+      {time} in {site.location} · {status}
+    </p>
+  )
+}
+
 // Finale: the prism comes back (src/three/Scene.tsx watches #contact), "Let's talk" rises letter by letter.
 export default function Contact() {
   const root = useRef<HTMLElement>(null)
@@ -77,6 +98,7 @@ export default function Contact() {
       <div>
         <p className="label mb-10">/ Contact</p>
         <p className="ct-in max-w-xl text-xl text-fg/70 sm:text-2xl">Building something on-chain, or hiring?</p>
+        <LocalTime />
       </div>
 
       <div className="mt-16">

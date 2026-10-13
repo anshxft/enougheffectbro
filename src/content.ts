@@ -19,6 +19,12 @@ export const site = {
   tagline: 'Developer, designer & web3 builder. 18, coding since 12.',
   location: 'India',
   status: 'just chilling',
+  // contact line: what I'm probably doing at this hour in India (checked in order, `until` is exclusive)
+  hours: [
+    { until: 6, status: 'probably asleep, replies in the morning' },
+    { until: 18, status: 'probably building' },
+    { until: 24, status: 'probably watching charts' },
+  ],
   email: 'alanleader6267@gmail.com',
   socials: [
     { label: 'GitHub', href: 'https://github.com/anshxft' },
