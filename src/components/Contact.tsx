@@ -41,21 +41,20 @@ function Magnetic({ children, strength = 0.35 }: { children: ReactNode; strength
   )
 }
 
-// Finale: the prism comes back (src/three/Scene.tsx watches #contact), the email rises letter by letter.
+// Finale: the prism comes back (src/three/Scene.tsx watches #contact), "Let's talk" rises letter by letter.
 export default function Contact() {
   const root = useRef<HTMLElement>(null)
   const [copied, setCopied] = useState(false)
-  const [user, domain] = site.email.split('@')
 
   useGSAP(
     () => {
       const mm = gsap.matchMedia()
       mm.add('(prefers-reduced-motion: no-preference)', () => {
-        SplitText.create('.ct-email', {
-          type: 'chars',
+        SplitText.create('.ct-title', {
+          type: 'words,chars', // words keep a narrow screen from breaking mid-word
           mask: 'chars',
           onSplit: (self) =>
-            gsap.from(self.chars, { yPercent: 110, duration: 0.8, ease: 'power3.out', stagger: 0.015, scrollTrigger: { trigger: '.ct-email', start: 'top 85%' } }),
+            gsap.from(self.chars, { yPercent: 110, duration: 1, ease: 'expo.out', stagger: 0.04, scrollTrigger: { trigger: '.ct-title', start: 'top 85%' } }),
         })
         gsap.from('.ct-in', { y: 24, autoAlpha: 0, duration: 0.7, stagger: 0.08, scrollTrigger: { trigger: root.current, start: 'top 60%' } })
       })
@@ -77,18 +76,31 @@ export default function Contact() {
     <section ref={root} id="contact" aria-labelledby="contact-title" className="relative flex min-h-svh flex-col justify-between px-4 pt-32 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] sm:px-8">
       <div>
         <p className="label mb-10">/ Contact</p>
-        <h2 id="contact-title" className="ct-in max-w-xl text-2xl text-fg/80 sm:text-3xl">
-          Building something on-chain, or hiring? Email me.
-        </h2>
+        <p className="ct-in max-w-xl text-xl text-fg/70 sm:text-2xl">Building something on-chain, or hiring?</p>
       </div>
 
       <div className="mt-16">
-        <a href={`mailto:${site.email}`} className="ct-email display block text-[clamp(1.25rem,4.2vw,4rem)] normal-case transition-colors hover:text-accent">
-          {/* two inline blocks so a narrow screen wraps at the @, never mid-word */}
-          <span className="inline-block">{user}</span>
-          <span className="inline-block">@{domain}</span>
-        </a>
+        <h2 id="contact-title">
+          <a href={`mailto:${site.email}`} className="group relative inline-flex items-start gap-[0.12em] pb-[0.08em]">
+            <span className="ct-title display text-[clamp(3rem,11vw,10rem)]">Let&apos;s talk</span>
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden
+              className="mt-[0.1em] size-[clamp(2rem,7vw,6.5rem)] transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:translate-x-[0.12em] group-hover:-translate-y-[0.12em]"
+            >
+              <path d="M7 17 17 7M8 7h9v9" fill="none" stroke="currentColor" strokeWidth="2.25" />
+            </svg>
+            {/* underline draws in from the left on hover */}
+            <span
+              aria-hidden
+              className="absolute inset-x-0 bottom-0 h-[3px] origin-left scale-x-0 bg-fg transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-x-100"
+            />
+          </a>
+        </h2>
         <div className="mt-10 flex flex-wrap items-center gap-4">
+          <a href={`mailto:${site.email}`} className="ct-in mr-2 font-mono text-sm text-fg/70 transition-colors hover:text-fg sm:text-base">
+            {site.email}
+          </a>
           <Magnetic>
             <button type="button" onClick={copy} className="ct-in label inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-fg! transition-colors hover:bg-fg hover:text-bg!" aria-live="polite">
               {copied ? 'Copied ✓' : 'Copy email'}
