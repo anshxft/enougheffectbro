@@ -22,3 +22,13 @@ export function listenInput() {
     window.removeEventListener('scroll', onScroll)
   }
 }
+
+// 0 at the top of the page, 1 once the end of #interlude (the scroll stretch between the hero and
+// the first project) reaches the bottom of the viewport. Drives the A's turn and the rotating words.
+export function storyProgress() {
+  const el = document.getElementById('interlude')
+  if (!el) return 0
+  const toEnd = el.getBoundingClientRect().bottom - window.innerHeight
+  const total = window.scrollY + toEnd
+  return total > 0 ? Math.min(1, Math.max(0, window.scrollY / total)) : 1
+}

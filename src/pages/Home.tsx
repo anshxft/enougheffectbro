@@ -1,5 +1,8 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
 import { useLocation } from 'react-router'
 import { TLink } from '../components/PageTransition'
 import About from '../components/About'
@@ -26,6 +29,7 @@ export default function Home() {
   const [loading, setLoading] = useState(withLoader)
   const [timedOut, setTimedOut] = useState(false)
   const heroMeta = useRef<HTMLDivElement>(null)
+  const heroFade = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setTimedOut(true), 8000)
@@ -36,6 +40,19 @@ export default function Home() {
     if (withLoader) gsap.set([heroMeta.current, document.querySelector('header')], { autoAlpha: 0 })
     else playIntro(true)
   }, [withLoader])
+
+  // hero captions + HUD fade out over the first ~third of a screen of scrolling
+  useEffect(() => {
+    const tween = gsap.to(heroFade.current, {
+      opacity: 0,
+      ease: 'none',
+      scrollTrigger: { trigger: '#top', start: 'top top', end: '35% top', scrub: true },
+    })
+    return () => {
+      tween.scrollTrigger?.kill()
+      tween.kill()
+    }
+  }, [])
 
   // #works etc. from the nav or another page: scroll there once the page (and loader) allow it
   const { hash } = useLocation()
@@ -67,6 +84,8 @@ export default function Home() {
           >
             {site.name}
           </h1>
+          {/* captions + HUD fade out as the hero scrolls away, so they never ride up under the header */}
+          <div ref={heroFade}>
           <HeroHud />
           <div ref={heroMeta} className="relative mt-6 flex flex-wrap items-end justify-between gap-4">
             <p className="max-w-md text-lg text-fg/80">{site.tagline}</p>
@@ -78,10 +97,14 @@ export default function Home() {
               <p className="label">Based in {site.location}</p>
             </div>
           </div>
+          </div>
         </section>
 
         <Section id="works" label="Works">
-          <h2 className="display mb-16 text-[clamp(3rem,12vw,10rem)]">Works</h2>
+          {/* scroll stretch where the glass A turns and big words sweep round the dome (src/three/Story.tsx) */}
+          <div id="interlude" className="relative h-[260vh]">
+            <h2 className="sr-only">Works</h2>
+          </div>
           {/* Each project pins for ~3 screens; the WebGL screen (src/three/Works.tsx) reads this element's scroll position. */}
           {works.map((w, i) => (
             <article key={w.slug} id={`work-${w.slug}`} aria-labelledby={`work-${w.slug}-title`} className="relative h-[300vh]">

@@ -11,8 +11,9 @@ import { LensGlitchEffect } from './LensGlitch'
 import { tint } from './palette'
 import Backdrop from './Backdrop'
 import Ripples from './Ripples'
+import Story from './Story'
 import Works from './Works'
-import { input, listenInput } from './input'
+import { input, listenInput, storyProgress } from './input'
 import glassVert from './shaders/glass.vert'
 import glassFrag from './shaders/glass.frag'
 
@@ -77,20 +78,21 @@ function Prism({ low }: { low: boolean }) {
     const m = ref.current
     if (!m) return
     const t = state.clock.elapsedTime
-    const s = input.scroll
+    const sp = storyProgress() // 0 hero top .. 1 end of the interlude
     // finale: 0 while #contact is below the fold, 1 once its top reaches the top of the viewport
     const contact = document.getElementById('contact')
     const cp = contact ? Math.min(1, Math.max(0, (window.innerHeight - contact.getBoundingClientRect().top) / window.innerHeight)) : 0
-    const active = s < 1.4 || cp > 0.01
+    const active = sp < 0.999 || cp > 0.01
     if (active !== onStage) setOnStage(active)
     const k = 1 - Math.exp(-dt * 4) // frame-rate independent smoothing
     // intro: grow from 55% with a little overshoot while spinning into place
     pop.current += (fx.intro - pop.current) * (1 - Math.exp(-dt * 6))
     const p = pop.current
     m.scale.setScalar(scale * (0.55 + 0.45 * p + Math.sin(p * Math.PI) * 0.12) * (cp > 0 ? (mobile ? 0.5 : 0.43) : 1))
-    // sway instead of a full spin: a big A seen edge-on reads as a solid slab
-    const targetY = (still ? 0 : Math.sin(t * 0.35) * 0.55) + s * Math.PI * 0.6 + input.pointer.x * 0.35 + (1 - p) * Math.PI * 2
-    const targetX = -input.pointer.y * 0.3 + Math.sin(t * 0.4) * (still ? 0 : 0.08)
+    // idle sway, plus one full turn across the interlude while the words sweep past behind it
+    const turn = THREE.MathUtils.smoothstep(sp, 0.04, 0.9) * Math.PI * 2
+    const targetY = (still ? 0 : Math.sin(t * 0.35) * 0.55) + turn + input.pointer.x * 0.35 + (1 - p) * Math.PI * 2
+    const targetX = -input.pointer.y * 0.3 + Math.sin(t * 0.4) * (still ? 0 : 0.08) + Math.sin(turn / 2) * 0.25
     m.rotation.y += (targetY - m.rotation.y) * k
     m.rotation.x += (targetX - m.rotation.x) * k
     m.quaternion.toArray(hud.q)
@@ -101,10 +103,11 @@ function Prism({ low }: { low: boolean }) {
       // up beside the email / buttons, clear of the pressure wordmark below
       m.position.set(mobile ? 0 : viewport.width * 0.35, -viewport.height * 0.9 * (1 - e) + viewport.height * (mobile ? 0.28 : 0.2), 0)
     } else {
-      // drift up and recede as the hero scrolls away
+      // stays centre stage through the interlude, then lifts and recedes as the first project arrives
+      const exit = THREE.MathUtils.smoothstep(sp, 0.86, 1)
       m.position.x += (0 - m.position.x) * k
-      m.position.y += (s * viewport.height * 0.35 - m.position.y) * k
-      m.position.z += (-s * 2 - m.position.z) * k
+      m.position.y += (exit * viewport.height * 0.8 - m.position.y) * k
+      m.position.z += (-exit * 3 - m.position.z) * k
     }
 
     if (!onStage || !mat.current) return
@@ -142,9 +145,13 @@ function BackText() {
     const g = ref.current
     if (!g) return
     const k = 1 - Math.exp(-dt * 5)
-    g.position.y += (input.scroll * vp.height * 0.6 - g.position.y) * k
+    // fades out (and eases back a little) over the first stretch of scrolling
+    const out = THREE.MathUtils.smoothstep(storyProgress(), 0.02, 0.14)
+    g.position.z += (z - out * 1.5 - g.position.z) * k
+    g.visible = out < 1
     // flicker in while the intro runs: random full/dim frames, weighted by progress
-    if (text.current) text.current.fillOpacity = fx.intro >= 1 ? 1 : Math.random() < fx.intro ? 1 : fx.intro * 0.2
+    const shown = fx.intro >= 1 ? 1 : Math.random() < fx.intro ? 1 : fx.intro * 0.2
+    if (text.current) text.current.fillOpacity = shown * (1 - out)
   })
 
   return (
@@ -220,6 +227,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
         <color attach="background" args={['#050505']} />
         <Backdrop />
         <BackText />
+        <Story />
         <Prism low={low} />
         <Suspense fallback={null}>
           <Works />
