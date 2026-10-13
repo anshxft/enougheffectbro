@@ -109,3 +109,10 @@ export const experience = [
   { year: '2026', title: 'Heldby', body: 'USDC escrow with an AI arbiter on Arc.' },
   { year: 'Now', title: 'Student', body: '18, building and trading.' },
 ]
+
+// PredictArc contracts on Arc mainnet (read live by the on-chain section)
+export const arcExplorer = 'https://explorer.arc.io'
+export const arcContracts: { label: string; address: `0x${string}` }[] = [
+  { label: 'PredictArc V3', address: '0x7718408EA41a92F1f2A356535BAE43cBe73275eb' },
+  { label: 'PredictArc V2', address: '0xA5C7BC89827a67d794DF11ee9D90c4331b34d15A' },
+]

@@ -8,10 +8,12 @@ import { TLink } from '../components/PageTransition'
 import About from '../components/About'
 import Contact from '../components/Contact'
 import Experience from '../components/Experience'
+import GitHubActivity from '../components/GitHubActivity'
 import Header from '../components/Header'
 import HeroHud from '../components/HeroHud'
 import { ThinkingOrb } from 'thinking-orbs'
 import Loader from '../components/Loader'
+import OnChain from '../components/OnChain'
 import Services from '../components/Services'
 import Section from '../components/Section'
 import { site, works } from '../content'
@@ -214,9 +216,11 @@ export default function Home() {
           ))}
         </Section>
 
+        <OnChain />
         <About />
         <Services />
         <Experience />
+        <GitHubActivity />
         <Contact />
       </main>
     </>

@@ -5,6 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import { useGSAP } from '@gsap/react'
 import Header from '../components/Header'
+import NotFound from './NotFound'
 import { TLink } from '../components/PageTransition'
 import { works } from '../content'
 import { useSmoothScroll } from '../lib/smooth-scroll'
@@ -54,16 +55,7 @@ function WorkView({ slug }: { slug?: string }) {
     { scope: root },
   )
 
-  if (!work) {
-    return (
-      <main className="flex min-h-svh flex-col items-center justify-center gap-6 px-4">
-        <p className="label">404</p>
-        <TLink to="/" className="display text-4xl hover:text-accent">
-          Back home
-        </TLink>
-      </main>
-    )
-  }
+  if (!work) return <NotFound />
 
   return (
     <>
