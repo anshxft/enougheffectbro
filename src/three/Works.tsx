@@ -55,8 +55,7 @@ function Screen({ mat, meshRef, width, bend, segments, dim = 1, back = false, ..
 // One project, driven by its DOM section (#work-<slug>): a big curved glass slab front and centre,
 // the next screenshot on a larger, steeper card half off the right edge, a small faded one on the
 // left. The set swings in from the right around the dome centre, settles in front of the glass A,
-// crossfades its screenshot every third of the scroll, and swings out to the left; the current
-// screenshot also tints the room.
+// swings out to the left, once per screenshot; the current screenshot also tints the room.
 function WorkScene({ work }: { work: Work }) {
   const textures = useTexture(
     work.images.map((i) => i.src),
@@ -75,7 +74,6 @@ function WorkScene({ work }: { work: Work }) {
   const backMat = useRef<THREE.ShaderMaterial>(null)
   const leftMat = useRef<THREE.ShaderMaterial>(null)
   const rightMat = useRef<THREE.ShaderMaterial>(null)
-  const swap = useRef({ from: 0, to: 0, mix: 1 })
   const mobile = viewport.aspect < 0.8
 
   const mainW = mobile ? viewport.width * 0.84 : Math.min(viewport.width * 0.6, viewport.height * 0.74 * ASPECT)
@@ -91,50 +89,49 @@ function WorkScene({ work }: { work: Work }) {
     const r = el.getBoundingClientRect()
     const vh = window.innerHeight
     const p = clamp01((vh - r.top) / (r.height + vh))
-    // Consecutive projects overlap in p by 0.75 (300vh article vs 100vh viewport), so a project is
-    // fully gone by 0.84 and the next starts arriving at its own 0.1 (= 0.85 of this one): clean handoff,
-    // with a beat where only the A shows.
-    const vis = smooth(0.1, 0.22, p) * (1 - smooth(0.72, 0.84, p))
+    // Each screenshot is its own slide: it swings in from the right around the dome centre, holds in
+    // front of the glass A, and swings out to the left as the next one swings in.
+    // Consecutive projects overlap in p by 0.75 (300vh article vs 100vh viewport), so the slides run
+    // between 0.1 and 0.84: the next project's first slide starts at its own 0.1 (= 0.85 here).
+    const START = 0.1
+    const END = 0.84
+    const len = (END - START) / n
+    const raw = (p - START) / len
+    const idx = Math.min(n - 1, Math.max(0, Math.floor(raw)))
+    const q = raw - idx // 0..1 within the current slide
+    const inRange = raw > 0 && raw < n
+    const vis = inRange ? smooth(0, 0.18, q) * (1 - smooth(0.82, 1, q)) : 0
     pv.visible = vis > 0.001
     // swing: from the right into centre, hold, out to the left (positive turn moves things left)
-    pv.rotation.y = -SWING * (1 - smooth(0.08, 0.26, p)) + SWING * smooth(0.68, 0.86, p)
+    pv.rotation.y = -SWING * (1 - smooth(0, 0.32, q)) + SWING * smooth(0.68, 1, q)
     if (!pv.visible) {
       if (ambient.owner === work.slug) ambient.amount = 0
       return
     }
-
-    // which screenshot: thirds of the hold
-    const idx = Math.min(n - 1, Math.floor(clamp01((p - 0.26) / 0.42) * n))
-    const s = swap.current
-    if (idx !== s.to) {
-      s.from = s.to
-      s.to = idx
-      s.mix = 0
-    }
-    s.mix = Math.min(1, s.mix + dt * 1.6)
     const t = state.clock.elapsedTime
 
     ambient.owner = work.slug
-    ambient.tex = textures[s.to]
+    ambient.tex = textures[idx]
     ambient.amount = vis
 
+    // the slide's texture only changes while it is fully faded out, so no crossfade is needed
     for (const ref of [mainMat, backMat]) {
       const m = ref.current?.uniforms
       if (!m) continue
-      m.uTexA.value = textures[s.from]
-      m.uTexB.value = textures[s.to]
-      m.uMix.value = s.mix
+      m.uTexA.value = textures[idx]
+      m.uTexB.value = textures[idx]
+      m.uMix.value = 1
       m.uReveal.value = vis
       m.uTime.value = t
     }
     for (const [ref, off] of [[rightMat, 1], [leftMat, 2]] as const) {
       const mat = ref.current
       if (!mat) continue
-      const tex = textures[(s.to + off) % n]
+      const tex = textures[(idx + off) % n]
       mat.uniforms.uTexA.value = tex
       mat.uniforms.uTexB.value = tex
-      mat.uniforms.uMix.value = 1 // no swap on the side cards: shader reads one texture
-      mat.uniforms.uReveal.value = smooth(0.25, 1, vis)
+      mat.uniforms.uMix.value = 1
+      mat.uniforms.uReveal.value = vis * 0.9
       mat.uniforms.uTime.value = t
     }
 
