@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { works, type Work } from '../content'
 import { input } from './input'
 import { ambient } from './palette'
+import { RING_END, RING_START, ringX } from '../lib/work-ring'
 import screenVert from './shaders/screen.vert'
 import screenFrag from './shaders/screen.frag'
 
@@ -71,6 +72,7 @@ function WorkScene({ work }: { work: Work }) {
   const ring = useRef<THREE.Group>(null)
   const mats = useRef<(THREE.ShaderMaterial | null)[]>([])
   const backs = useRef<(THREE.ShaderMaterial | null)[]>([])
+  const pos = useRef(-1.2)
   const mobile = viewport.aspect < 0.8
   const n = textures.length
 
@@ -85,21 +87,22 @@ function WorkScene({ work }: { work: Work }) {
     const rect = el.getBoundingClientRect()
     const vh = window.innerHeight
     const p = clamp01((vh - rect.top) / (rect.height + vh))
-    // Consecutive projects overlap in p by 0.75 (300vh article vs 100vh viewport): this project runs
-    // over 0.1..0.84 so the next one's first card arrives at its own 0.1 (= 0.85 here).
-    const u = clamp01((p - 0.1) / 0.74)
-    // ring position in "cards": from -1.2 (first card entering on the right) to n + 0.2 (last
-    // card leaving on the left), easing through each whole number so every card pauses in front
-    const x = -1.2 + (n + 1.4) * u
+    // ring position in "cards", easing through each whole number so every card pauses in front
+    const x = ringX(p, n)
     const base = Math.floor(x)
-    const pos = base + smooth(0.22, 0.78, x - base)
-    r.rotation.y = pos * step
+    const target = base + smooth(0.22, 0.78, x - base)
+    // the ring follows the scroll with a little lag, so a fast flick still shows the cards turning past
+    // instead of jumping (and the scroll snaps onto a card once it stops; see Home.tsx)
+    const cur = pos.current
+    pos.current = Math.abs(target - cur) > n + 2 ? target : cur + (target - cur) * (1 - Math.exp(-dt * 6))
+    const ringPos = pos.current
+    r.rotation.y = ringPos * step
 
-    const live = p > 0.1 && p < 0.84
+    const live = p > RING_START && p < RING_END
     let anyVisible = false
     const t = state.clock.elapsedTime
     for (let i = 0; i < n; i++) {
-      const a = Math.abs(pos - i) * step // this card's angle from the front
+      const a = Math.abs(ringPos - i) * step // this card's angle from the front
       const vis = live ? 1 - smooth(step * 1.05, step * 1.7, a) : 0
       if (vis > 0.001) anyVisible = true
       const dim = 1 - 0.4 * smooth(step * 0.1, step, a)
@@ -115,11 +118,11 @@ function WorkScene({ work }: { work: Work }) {
     }
     o.visible = anyVisible
 
-    const front = Math.min(n - 1, Math.max(0, Math.round(pos)))
+    const front = Math.min(n - 1, Math.max(0, Math.round(ringPos)))
     if (anyVisible) {
       ambient.owner = work.slug
       ambient.tex = textures[front]
-      ambient.amount = live ? 1 - smooth(step * 0.5, step * 1.2, Math.abs(pos - front) * step) : 0
+      ambient.amount = live ? 1 - smooth(step * 0.5, step * 1.2, Math.abs(ringPos - front) * step) : 0
     } else if (ambient.owner === work.slug) ambient.amount = 0
 
     // gentle drift and lean towards the pointer

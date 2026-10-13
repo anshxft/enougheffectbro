@@ -15,7 +15,8 @@ import Loader from '../components/Loader'
 import Services from '../components/Services'
 import Section from '../components/Section'
 import { site, works } from '../content'
-import { prefersReducedMotion, scrollToTarget, useSmoothScroll } from '../lib/smooth-scroll'
+import { prefersReducedMotion, scrollToTarget, scrollToY, useSmoothScroll } from '../lib/smooth-scroll'
+import { cardP, RING_END, RING_START, WORK_VH } from '../lib/work-ring'
 import { introPlayed, playIntro } from '../three/fx'
 
 const Scene = lazy(() => import('../three/Scene'))
@@ -59,7 +60,7 @@ export default function Home() {
   useEffect(() => {
     const triggers = gsap.utils.toArray<HTMLElement>('[id^="work-"]').map((article) => {
       const caption = article.querySelectorAll('.wk-caption > *')
-      const pAt = (v: number) => `top ${100 - v * 400}%` // article top position at progress p (300vh article)
+      const pAt = (v: number) => `top ${100 - v * (WORK_VH + 100)}%` // article top position at progress p
       return gsap.timeline({ scrollTrigger: { trigger: article, start: pAt(0.18), end: pAt(0.8), scrub: true } })
         .fromTo(caption, { opacity: 0 }, { opacity: 1, duration: 0.1, ease: 'none' })
         .to(caption, { opacity: 1, duration: 0.8 })
@@ -69,6 +70,55 @@ export default function Home() {
       tl.scrollTrigger?.kill()
       tl.kill()
     })
+  }, [])
+
+  // works ring snap: once scrolling settles inside a project, glide to the nearest card so a quick
+  // flick never leaves a card half-turned or skipped
+  useEffect(() => {
+    let timer = 0
+    let snapping = false
+    const settle = () => {
+      if (snapping || document.documentElement.style.overflow === 'hidden') return
+      const vh = window.innerHeight
+      for (const [k, w] of works.entries()) {
+        const el = document.getElementById(`work-${w.slug}`)
+        if (!el) continue
+        const top = el.getBoundingClientRect().top + window.scrollY
+        const span = el.offsetHeight + vh
+        const p = (window.scrollY + vh - top) / span
+        if (p <= RING_START || p >= RING_END) continue
+        const n = works[k].images.length
+        let best = window.scrollY
+        let bestD = Infinity
+        for (let i = 0; i < n; i++) {
+          const y = cardP(i, n) * span - vh + top
+          const d = Math.abs(y - window.scrollY)
+          if (d < bestD) {
+            bestD = d
+            best = y
+          }
+        }
+        // only between the first and last card: entering / leaving stays free
+        const first = cardP(0, n) * span - vh + top
+        const last = cardP(n - 1, n) * span - vh + top
+        if (window.scrollY < first - vh * 0.35 || window.scrollY > last + vh * 0.35) return
+        if (bestD > 2) {
+          snapping = true
+          scrollToY(best, 0.7)
+          window.setTimeout(() => (snapping = false), 800)
+        }
+        return
+      }
+    }
+    const onScroll = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(settle, 160)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.clearTimeout(timer)
+    }
   }, [])
 
   // #works etc. from the nav or another page: scroll there once the page (and loader) allow it
@@ -125,7 +175,7 @@ export default function Home() {
           </div>
           {/* Each project pins for ~3 screens; the WebGL screen (src/three/Works.tsx) reads this element's scroll position. */}
           {works.map((w, i) => (
-            <article key={w.slug} id={`work-${w.slug}`} aria-labelledby={`work-${w.slug}-title`} className="relative h-[300vh]">
+            <article key={w.slug} id={`work-${w.slug}`} aria-labelledby={`work-${w.slug}-title`} className="relative" style={{ height: `${WORK_VH}vh` }}>
               <div className="sticky top-0 flex h-dvh flex-col justify-end pb-10">
                 {/* screenshots: shown as a still when there is no WebGL, otherwise kept for screen readers only */}
                 <div className={webgl ? 'sr-only' : 'absolute inset-x-0 top-24 grid gap-4 sm:grid-cols-3'}>

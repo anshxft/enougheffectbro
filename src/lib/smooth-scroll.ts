@@ -38,6 +38,12 @@ export function scrollToTarget(selector: string, immediate = false) {
   else el.scrollIntoView({ behavior: immediate ? 'instant' : 'smooth' })
 }
 
+// Smoothly scroll to a y position (through Lenis when it's running).
+export function scrollToY(y: number, duration = 0.8) {
+  if (lenis) lenis.scrollTo(y, { duration, easing: (t: number) => 1 - (1 - t) ** 3 })
+  else window.scrollTo({ top: y, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
+}
+
 // Freeze page scroll (wheel, touch, keys) e.g. while the loader is up.
 export function lockScroll(locked: boolean) {
   document.documentElement.style.overflow = locked ? 'hidden' : ''
