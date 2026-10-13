@@ -28,6 +28,8 @@ export type Work = {
   highlights: string[]
   tech: string[]
   images: { src: string; alt: string }[]
+  // case-study hero: a product shot, optionally a short film (muted loop) that uses it as fallback
+  hero: { image: string; film?: string; poster?: string; alt: string }
 }
 
 export const works: Work[] = [
@@ -45,6 +47,12 @@ export const works: Work[] = [
       'AI market briefs and per-market share images',
     ],
     tech: ['Solidity', 'Hardhat', 'React 19', 'Vite', 'Tailwind 4', 'viem', 'GSAP', 'Lenis', 'Vercel Functions'],
+    hero: {
+      image: '/works/predictarc-mockup.webp',
+      film: '/works/predictarc-film.mp4',
+      poster: '/works/predictarc-film-poster.webp',
+      alt: 'PredictArc home page on a floating glass tablet in a dark studio',
+    },
     images: [
       { src: '/works/predictarc-1.webp', alt: 'PredictArc home page with live stats: 34 markets on the Arc contract' },
       { src: '/works/predictarc-2.webp', alt: 'PredictArc markets index with category filters and market cards' },
@@ -65,6 +73,10 @@ export const works: Work[] = [
       '22 Foundry tests, including a fuzz test that funds are always conserved',
     ],
     tech: ['Solidity', 'Foundry', 'OpenZeppelin', 'Next.js', 'wagmi', 'viem', 'Groq'],
+    hero: {
+      image: '/works/heldby-mockup.webp',
+      alt: 'Heldby landing page on a laptop floating in a dark studio',
+    },
     images: [
       { src: '/works/heldby-1.webp', alt: 'Heldby landing page: Money held in trust, released when work is done, with a 250 USDC escrow card' },
       { src: '/works/heldby-2.webp', alt: 'Heldby AI agent section: a referee that never sleeps, with a live verification log' },

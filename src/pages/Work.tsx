@@ -22,6 +22,7 @@ export default function WorkPage() {
 
 function WorkView({ slug }: { slug?: string }) {
   const root = useRef<HTMLElement>(null)
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const index = works.findIndex((w) => w.slug === slug)
   const work = works[index]
   const next = works[(index + 1) % works.length]
@@ -43,7 +44,7 @@ function WorkView({ slug }: { slug?: string }) {
         gsap.from('.wk-meta', { y: 20, autoAlpha: 0, duration: 0.7, stagger: 0.08, delay: 0.7 })
         gsap.utils.toArray<HTMLElement>('.wk-shot').forEach((el) => {
           gsap.fromTo(el, { clipPath: 'inset(12% 12% 12% 12% round 16px)' }, { clipPath: 'inset(0% 0% 0% 0% round 16px)', ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: 'top 35%', scrub: true } })
-          gsap.fromTo(el.querySelector('img'), { scale: 1.15 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom top', scrub: true } })
+          gsap.fromTo(el.firstElementChild, { scale: 1.15 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom top', scrub: true } })
         })
         gsap.utils.toArray<HTMLElement>('.wk-up').forEach((el) =>
           gsap.from(el, { y: 40, autoAlpha: 0, duration: 0.8, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 85%' } }),
@@ -92,6 +93,24 @@ function WorkView({ slug }: { slug?: string }) {
             ))}
           </ul>
         </div>
+
+        <figure className="wk-shot mt-20 overflow-hidden rounded-2xl border border-grid bg-black">
+          {work.hero.film && !still ? (
+            <video
+              src={work.hero.film}
+              poster={work.hero.poster}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label={work.hero.alt}
+              className="block aspect-video w-full object-cover"
+            />
+          ) : (
+            <img src={work.hero.image} alt={work.hero.alt} width={1024} height={637} className="block w-full" />
+          )}
+        </figure>
 
         <p className="wk-up mt-24 max-w-3xl bg-bg text-2xl leading-snug sm:text-4xl">{work.summary}</p>
 
