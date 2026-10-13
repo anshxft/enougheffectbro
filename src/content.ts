@@ -27,8 +27,14 @@ export const site = {
   about:
     "I'm Ansh, an 18-year-old developer and designer from India. I wrote my first line of code at 12 and I've been building ever since. Right now I ship web3 products on Arc, like prediction markets and escrow, where real USDC moves through my contracts. I also trade crypto.",
   skills: ['Dev', 'Design', 'Web3', 'Crypto trading'],
-  // big statement in the About section, one entry per line
-  aboutLead: ['I build on-chain', 'products where', 'real money moves.'],
+  // big statement in the About section; the highlight closes it in an inverted block
+  aboutLead: 'I build on-chain products where',
+  aboutHighlight: 'real money moves.',
+  aboutStats: [
+    { value: 18, label: 'Years old' },
+    { value: 6, label: 'Years coding' },
+    { value: 2, label: 'Products on Arc' },
+  ],
 }
 
 export type Work = {
