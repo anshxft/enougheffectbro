@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import gsap from 'gsap'
 import { GLYPH_A } from '../three/glyph-a'
 import { lockScroll, prefersReducedMotion } from '../lib/smooth-scroll'
+import { playIntro } from '../three/fx'
 
 type P = [number, number]
 // Construction lines in glyph units (y up): guides through the A's edges, extended far past the screen.
@@ -74,11 +75,13 @@ export default function Loader({ ready, onDone }: { ready: boolean; onDone: () =
             },
           })
           .to(progress.current, { p: 1, duration: 0.35, ease: 'power2.out', onUpdate: render })
-          .to('.ld-a', { fillOpacity: 1, duration: 0.07, repeat: 4, yoyo: true, ease: 'steps(1)' })
-          .to('.ld-line', { opacity: 0, duration: 0.25 }, '<')
-          .to('.ld-hud', { opacity: 0, duration: 0.2 }, '<')
-          .to('.ld-svg', { opacity: 0, duration: 0.12 })
-          .to('.ld-tile', { opacity: 0, duration: 0.01, stagger: { each: 0.004, from: 'random' } }, '<')
+          // the A fills in softly, the guides and HUD fade, then the whole curtain lifts away
+          .to('.ld-a', { fillOpacity: 1, duration: 0.5, ease: 'power2.inOut' })
+          .to('.ld-line', { opacity: 0, duration: 0.4 }, '<')
+          .to('.ld-hud', { opacity: 0, duration: 0.3 }, '<')
+          // the scene's iris starts opening underneath as the curtain begins to lift
+          .call(() => void playIntro(prefersReducedMotion()), undefined, '+=0.1')
+          .to(root.current, { yPercent: -100, duration: 0.9, ease: 'power3.inOut' }, '<')
       }, root)
     })
   }, [ready])

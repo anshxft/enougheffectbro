@@ -10,7 +10,6 @@ import { GLYPH_A } from './glyph-a'
 import { LensGlitchEffect } from './LensGlitch'
 import { tint } from './palette'
 import Backdrop from './Backdrop'
-import Ripples from './Ripples'
 import Story from './Story'
 import Works from './Works'
 import { input, listenInput, storyProgress } from './input'
@@ -154,9 +153,10 @@ function BackText() {
     const out = THREE.MathUtils.smoothstep(storyProgress(), 0.02, 0.14)
     g.position.z += (z - out * 1.5 - g.position.z) * k
     g.visible = out < 1
-    // flicker in while the intro runs: random full/dim frames, weighted by progress
-    const shown = fx.intro >= 1 ? 1 : Math.random() < fx.intro ? 1 : fx.intro * 0.2
-    if (text.current) text.current.fillOpacity = shown * (1 - out)
+    // intro: the letters gather in from wide apart and fade up
+    const i = fx.intro
+    g.scale.set(1 + 0.35 * (1 - i), 1, 1)
+    if (text.current) text.current.fillOpacity = i ** 1.5 * (1 - out)
   })
 
   return (
@@ -239,10 +239,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
         </Suspense>
         <ReadySignal onReady={onReady} />
         {fxFlags !== '0' && (
-          <>
-            <Ripples />
-            <Effects />
-          </>
+          <Effects />
         )}
         {flags.get('perf') === '1' && (
           <Suspense fallback={null}>

@@ -37,7 +37,7 @@ export default function Home() {
   }, [])
 
   useLayoutEffect(() => {
-    if (withLoader) gsap.set([heroMeta.current, document.querySelector('header')], { autoAlpha: 0 })
+    if (withLoader) gsap.set([heroMeta.current, document.querySelector('header'), document.getElementById('hero-hud')], { autoAlpha: 0 })
     else playIntro(true)
   }, [withLoader])
 
@@ -85,6 +85,7 @@ export default function Home() {
     // element, not a 'header' selector: this runs from the loader's GSAP context, which scopes selectors to the loader
     gsap.to(document.querySelector('header'), { autoAlpha: 1, duration: 0.6, delay: 0.6 })
     gsap.fromTo(heroMeta.current, { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.8, delay: 0.8, ease: 'power3.out' })
+    gsap.to(document.getElementById('hero-hud'), { autoAlpha: 1, duration: 0.8, delay: 1 })
   }
 
   return (

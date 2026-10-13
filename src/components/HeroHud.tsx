@@ -35,7 +35,7 @@ export default function HeroHud() {
   }, [])
 
   return (
-    <div aria-hidden className="pointer-events-none absolute top-24 right-8 hidden w-44 flex-col items-end gap-5 lg:flex">
+    <div id="hero-hud" aria-hidden className="pointer-events-none absolute top-24 right-8 hidden w-44 flex-col items-end gap-5 lg:flex">
       <div className="text-right">
         <p className="label mb-1.5">A / Rotation</p>
         <p className="flex gap-2 font-mono text-[11px] text-fg/80 tabular-nums">

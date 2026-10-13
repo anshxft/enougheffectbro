@@ -1,12 +1,13 @@
-// Always-on radial chromatic aberration + an on-demand block glitch (uAmount 0..1):
-// shifted blocks, torn rows, accent-blue cells and white flashes, re-rolled ~14x a second.
+// Always-on radial chromatic aberration, a glass lens that follows the cursor, the intro iris, and an
+// on-demand block glitch (uAmount 0..1, used by transitions): shifted blocks, torn rows, accent cells.
 uniform float uAmount;
 uniform float uTime;
 uniform float uCA;
 uniform float uWave;
-uniform sampler2D uRipple;   // displacement field from Ripples.tsx
-uniform vec2 uRippleTexel;
-uniform float uRippleStrength;
+uniform float uReveal;  // 0..1 intro iris
+uniform float uAspect;  // width / height
+uniform vec2 uLens;     // cursor lens centre, uv
+uniform float uLensAmt; // 0..1 lens strength
 uniform vec3 uAccent;
 
 float hash(vec2 p) {
@@ -31,11 +32,18 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   float wy = cos(uv.x * 27.0 - uTime * 1.5 + sin(uv.y * 7.0 - uTime * 0.6) * 2.0);
   st += vec2(wx, wy) * 0.0016 * uWave;
 
-  // ripple distortion (React Bits' RippleDistortion, ported): push along a direction that swirls
-  // with the wave height, so rings bend the image instead of just shifting it
-  float ripple = texture2D(uRipple, uv).r;
-  float theta = ripple * 6.283185;
-  st += vec2(sin(theta), cos(theta)) * ripple * uRippleStrength;
+  // glass lens on the cursor: a soft disc that magnifies what's under it (pulls samples towards its
+  // centre), strongest in the middle and falling off smoothly to the rim
+  vec2 ld = (uv - uLens) * vec2(uAspect, 1.0);
+  float lr = length(ld);
+  float R = 0.16;
+  float inside = 1.0 - smoothstep(R * 0.7, R, lr);
+  st -= (uv - uLens) * inside * 0.34 * uLensAmt;
+  // the rim splits colour a little more, like the edge of a glass bead
+  float rim = smoothstep(R * 0.55, R * 0.92, lr) * (1.0 - smoothstep(R * 0.92, R * 1.05, lr)) * uLensAmt;
+
+  // intro: everything gently zoomed in until the iris opens
+  st = 0.5 + (st - 0.5) * (1.0 - 0.06 * (1.0 - uReveal));
 
   // blocks: grid size itself jumps between steps
   vec2 grid = vec2(16.0, 9.0) * (1.0 + floor(hash(vec2(t, 7.0)) * 3.0));
@@ -51,9 +59,10 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   vec2 dir = uv - 0.5;
   float ca = uCA * dot(dir, dir) * 4.0 + a * 0.014;
   vec3 col;
-  col.r = texture2D(inputBuffer, st + dir * ca + vec2(a * 0.004, 0.0)).r;
+  vec2 lensSplit = (uv - uLens) / max(lr, 0.0001) * rim * 0.004; // spectrum along the lens rim
+  col.r = texture2D(inputBuffer, st + dir * ca + lensSplit + vec2(a * 0.004, 0.0)).r;
   col.g = texture2D(inputBuffer, st).g;
-  col.b = texture2D(inputBuffer, st - dir * ca - vec2(a * 0.004, 0.0)).b;
+  col.b = texture2D(inputBuffer, st - dir * ca - lensSplit - vec2(a * 0.004, 0.0)).b;
 
   // accent-blue cells keep the underlying luminance so letters still read through them
   vec2 lcell = floor(uv * vec2(16.0, 9.0) * 2.0);
@@ -64,15 +73,13 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   // rare white flashes
   col += on * step(hash(lcell * 2.3 + tl + 9.7), a * 0.02) * 0.5;
 
-  // glint where the ripple field slopes towards a light from the top left
-  if (ripple > 0.001) {
-    float ex = texture2D(uRipple, uv + vec2(uRippleTexel.x, 0.0)).r - texture2D(uRipple, uv - vec2(uRippleTexel.x, 0.0)).r;
-    float ey = texture2D(uRipple, uv + vec2(0.0, uRippleTexel.y)).r - texture2D(uRipple, uv - vec2(0.0, uRippleTexel.y)).r;
-    vec3 nrm = normalize(vec3(-ex * 26.0, -ey * 26.0, 1.0));
-    vec3 lgt = normalize(vec3(-0.35, 0.55, 1.0));
-    float flatSpec = pow(lgt.z, 22.0);
-    col += clamp((pow(max(dot(nrm, lgt), 0.0), 22.0) - flatSpec) / (1.0 - flatSpec), 0.0, 1.0) * 0.15;
-  }
+  // lens rim catches a little light
+  col += rim * 0.12;
+
+  // intro iris: a soft circle of light opening from the centre over black
+  float iris = length((uv - 0.5) * vec2(uAspect, 1.0));
+  float open = uReveal * (0.5 * length(vec2(uAspect, 1.0)) + 0.25);
+  col *= smoothstep(open, open - 0.18, iris);
 
   outputColor = vec4(col, inputColor.a);
 }
