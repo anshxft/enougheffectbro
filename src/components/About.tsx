@@ -4,8 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import { useGSAP } from '@gsap/react'
 import { site } from '../content'
-import { tick } from '../lib/sound'
-import { glitchBurst } from '../three/fx'
+import { tick, whoosh } from '../lib/sound'
 
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
 
@@ -25,7 +24,7 @@ export default function About() {
           {
             clipPath: 'inset(0% 0% 0% 0%)',
             ease: 'none',
-            scrollTrigger: { trigger: root.current, start: 'top bottom', end: 'top top', scrub: true, onEnter: () => glitchBurst(0.6, 0.5) },
+            scrollTrigger: { trigger: root.current, start: 'top bottom', end: 'top top', scrub: true, onEnter: () => whoosh(0.6) },
           },
         )
 

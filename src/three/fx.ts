@@ -36,9 +36,3 @@ export function playIntro(instant = false) {
     .to(fx, { intro: 1, duration: 2.0, ease: 'power3.out' }, 0.35)
   return tl
 }
-
-// Short glitch hit for transitions.
-export function glitchBurst(amount = 0.7, duration = 0.6) {
-  whoosh(duration)
-  return gsap.fromTo(fx, { glitch: amount }, { glitch: 0, duration, ease: 'power2.in', overwrite: true })
-}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, type AnchorHTMLAttributes, type MouseEvent, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, type AnchorHTMLAttributes, type MouseEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import gsap from 'gsap'
 import { lockScroll, prefersReducedMotion, scrollToTarget } from '../lib/smooth-scroll'
@@ -7,8 +7,8 @@ import { whoosh } from '../lib/sound'
 const GoContext = createContext<(to: string) => void>(() => {})
 const useGo = () => useContext(GoContext)
 
-// Route changes behind a wall of blocks: tiles pop in randomly to cover the page, the route
-// changes underneath, then they pop out again on the new page.
+// Route changes behind a curtain: a black panel with a curved leading edge rises over the page,
+// the route changes underneath, then the panel carries on up and off the new page.
 export function PageTransitionProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -16,18 +16,13 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
   const covering = useRef(false)
   const first = useRef(true)
 
-  const { cols, rows } = useMemo(() => {
-    const cols = window.innerWidth < 768 ? 6 : 12
-    return { cols, rows: Math.ceil((cols * window.innerHeight) / window.innerWidth) }
-  }, [])
-
   const go = (to: string) => {
     if (covering.current) return
-    const tiles = wall.current?.children
+    const curtain = wall.current
     // same page (e.g. a #hash) or reduced motion: no wall, since the uncover waits for a pathname change.
     // Scroll explicitly too: re-clicking the current #hash doesn't change the location.
     const url = new URL(to, window.location.href)
-    if (prefersReducedMotion() || !tiles || url.pathname === pathname) {
+    if (prefersReducedMotion() || !curtain || url.pathname === pathname) {
       navigate(to)
       if (url.pathname === pathname && url.hash) setTimeout(() => scrollToTarget(url.hash), 60)
       return
@@ -37,8 +32,10 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
     lockScroll(true)
     gsap
       .timeline({ onComplete: () => navigate(to) })
-      .set(wall.current, { visibility: 'visible' })
-      .fromTo(tiles, { opacity: 0 }, { opacity: 1, duration: 0.01, stagger: { each: 0.006, from: 'random' } })
+      .set(curtain, { visibility: 'visible' })
+      // rises from below; its top edge starts as a wide arc and flattens as it covers the screen
+      .fromTo(curtain, { yPercent: 100, '--arc': '60%' }, { yPercent: 0, '--arc': '0%', duration: 0.7, ease: 'power3.inOut' })
+      .fromTo(curtain.firstElementChild, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.35, ease: 'power2.out' }, '-=0.25')
   }
 
   // uncover after the new route has rendered
@@ -56,8 +53,10 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
           lockScroll(false)
         },
       })
-      .to(wall.current.children, { opacity: 0, duration: 0.01, stagger: { each: 0.006, from: 'random' } })
-      .set(wall.current, { visibility: 'hidden' })
+      .to(wall.current.firstElementChild, { autoAlpha: 0, duration: 0.25 })
+      // carries on upwards, now with the arc on its trailing (bottom) edge
+      .fromTo(wall.current, { yPercent: 0, '--arc-b': '0%' }, { yPercent: -100, '--arc-b': '60%', duration: 0.75, ease: 'power3.inOut' }, '<')
+      .set(wall.current, { visibility: 'hidden', '--arc-b': '0%' })
   }, [pathname])
 
   return (
@@ -66,12 +65,10 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
       <div
         ref={wall}
         aria-hidden
-        className="pointer-events-none invisible fixed inset-0 z-[95] grid"
-        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}
+        className="pointer-events-none invisible fixed inset-0 z-[95] flex items-center justify-center bg-bg [border-radius:50%_50%_50%_50%/var(--arc)_var(--arc)_var(--arc-b)_var(--arc-b)]"
+        style={{ '--arc': '0%', '--arc-b': '0%' } as React.CSSProperties}
       >
-        {Array.from({ length: cols * rows }, (_, i) => (
-          <div key={i} className={`-m-px opacity-0 ${i % 7 === 3 ? 'bg-accent' : 'bg-bg'}`} />
-        ))}
+        <span className="display text-[clamp(2rem,6vw,5rem)] text-fg/15">Ansh</span>
       </div>
     </GoContext.Provider>
   )
