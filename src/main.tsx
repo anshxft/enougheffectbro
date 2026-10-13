@@ -9,7 +9,7 @@ import Cursor from './components/Cursor'
 import { PageTransitionProvider } from './components/PageTransition'
 import { SoundPrompt } from './components/Sound'
 import Home from './pages/Home'
-import Journey from './pages/Journey'
+import Elsewhere from './pages/Elsewhere'
 import NotFound from './pages/NotFound'
 import WorkPage from './pages/Work'
 
@@ -24,7 +24,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/work/:slug" element={<WorkPage />} />
-          <Route path="/journey" element={<Journey />} />
+          <Route path="/elsewhere" element={<Elsewhere />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <SoundPrompt />

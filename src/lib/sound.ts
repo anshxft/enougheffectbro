@@ -146,7 +146,7 @@ export function whoosh(duration = 0.6) {
   src.start(t)
 }
 
-// Mute the studio drone while somewhere quieter (the journey page) and bring it back after.
+// Mute the studio drone while somewhere quieter (the elsewhere page) and bring it back after.
 function duckDrone(duck: boolean) {
   droneDucked = duck
   if (ctx && droneBed) droneBed.gain.setTargetAtTime(duck ? 0 : 0.045, ctx.currentTime, 0.6)
@@ -172,7 +172,7 @@ function chirp(at: number, from: number, to: number, peak: number) {
   o.stop(end)
 }
 
-// Outdoor ambience for the journey page: wind that breathes, birds by day, crickets at night.
+// Outdoor ambience for the elsewhere page: wind that breathes, birds by day, crickets at night.
 // setTime(0..1) runs dawn to night. The graph is built only once sound is on.
 export function nature() {
   let time = 0
@@ -236,4 +236,18 @@ export function nature() {
       }
     },
   }
+}
+
+// A soft footstep on a dirt path: a short burst of low noise.
+export function step() {
+  if (!on) return
+  const { ctx } = audio()
+  const src = ctx.createBufferSource()
+  src.buffer = noiseBuffer(0.12)
+  const low = ctx.createBiquadFilter()
+  low.type = 'lowpass'
+  low.frequency.value = 700 + Math.random() * 300
+  const { g, t } = envelope(0.07, 0.005, 0.09)
+  src.connect(low).connect(g)
+  src.start(t)
 }

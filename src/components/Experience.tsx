@@ -36,15 +36,15 @@ export default function Experience() {
         <h2 id="experience-title" className="display text-[clamp(3rem,12vw,10rem)]">
           Journey
         </h2>
-        {/* door to the journey page: a small dawn sun is the only warm colour on the dark site */}
-        <TLink to="/journey" className="group flex min-h-11 items-center gap-4 rounded-full border border-grid bg-bg/90 py-2 pr-6 pl-2 transition-colors hover:border-fg">
+        {/* door to the elsewhere page (a quiet place to walk around): a small dawn sun is the only warm colour on the dark site */}
+        <TLink to="/elsewhere" className="group flex min-h-11 items-center gap-4 rounded-full border border-grid bg-bg/90 py-2 pr-6 pl-2 transition-colors hover:border-fg">
           <span
             aria-hidden
             className="size-12 rounded-full bg-[radial-gradient(circle_at_50%_70%,#fff1dc_0_28%,#f4cf93_29%_45%,#d98e62_46%_70%,#3a2e22_71%)] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110 group-hover:rotate-12"
           />
           <span>
             <span className="block text-lg font-medium">Step outside</span>
-            <span className="label">Walk the timeline →</span>
+            <span className="label">Somewhere quieter →</span>
           </span>
         </TLink>
       </div>

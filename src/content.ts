@@ -156,12 +156,11 @@ export const stack: { name: string; group: string; note: string; icon?: { path: 
   { name: 'GitHub', group: 'Ship', note: 'Code, history, deploys', icon: siGithub },
 ]
 
-// The journey page: the timeline walked through a landscape, dawn to night
-export const journey = {
+// The elsewhere page: a quiet valley you walk through as a little hiker
+export const elsewhere = {
   intro: 'Step outside.',
-  hint: 'Scroll to walk',
-  outro: 'That’s the road so far.',
+  hint: 'Scroll, or hold → to walk',
+  hintTouch: 'Swipe up to walk',
+  outro: 'Stay as long as you like.',
   back: 'Back to the studio',
-  // where each experience entry stands along the walk (0 = dawn, 1 = night)
-  stops: [0.14, 0.36, 0.58, 0.8],
 }
