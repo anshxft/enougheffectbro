@@ -23,7 +23,7 @@ export class LensGlitchEffect extends Effect {
         ['uWave', new Uniform(1)],
         ['uRipple', new Uniform(NO_RIPPLE)],
         ['uRippleTexel', new Uniform(new Vector2(1 / 512, 1 / 512))],
-        ['uRippleStrength', new Uniform(0.028)],
+        ['uRippleStrength', new Uniform(0.013)],
         ['uAccent', new Uniform(new Color(accent))],
       ]),
     })

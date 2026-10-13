@@ -71,7 +71,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     vec3 nrm = normalize(vec3(-ex * 26.0, -ey * 26.0, 1.0));
     vec3 lgt = normalize(vec3(-0.35, 0.55, 1.0));
     float flatSpec = pow(lgt.z, 22.0);
-    col += clamp((pow(max(dot(nrm, lgt), 0.0), 22.0) - flatSpec) / (1.0 - flatSpec), 0.0, 1.0) * 0.35;
+    col += clamp((pow(max(dot(nrm, lgt), 0.0), 22.0) - flatSpec) / (1.0 - flatSpec), 0.0, 1.0) * 0.15;
   }
 
   outputColor = vec4(col, inputColor.a);

@@ -11,11 +11,11 @@ import { rippleField } from './fx'
 const MAX_WAVES = 100
 const START_SCALE = 1.5
 const LIFE = Math.log(500)
-const BRUSH = 150 // px
-const SPREAD = 5
-const FADE = 2.6 // s
+const BRUSH = 110 // px
+const SPREAD = 4
+const FADE = 1.6 // s
 const SPACING = 15 // px between trail waves
-const CLICK = 1.6
+const CLICK = 1.3
 const FIELD_SCALE = 0.4
 const tmpColor = new THREE.Color()
 
