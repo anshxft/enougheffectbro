@@ -8,7 +8,9 @@ import { ambient } from './palette'
 import screenVert from './shaders/screen.vert'
 import screenFrag from './shaders/screen.frag'
 
-const ACCENT = new THREE.Color('#2b3bff')
+// screens swing round the same dome centre the interlude words use
+const PIVOT = new THREE.Vector3(0, 0, 2)
+const SWING = 1.1 // radians either side of centre at entry / exit
 const ASPECT = 1.6
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 const smooth = (a: number, b: number, v: number) => {
@@ -37,7 +39,6 @@ function Screen({ mat, meshRef, width, bend, segments, dim = 1, back = false, ..
       uTime: { value: 0 },
       uBend: { value: bend },
       uAspect: { value: ASPECT },
-      uAccent: { value: ACCENT },
       uDim: { value: dim },
       uBack: { value: back ? 1 : 0 },
     }),
@@ -53,8 +54,9 @@ function Screen({ mat, meshRef, width, bend, segments, dim = 1, back = false, ..
 
 // One project, driven by its DOM section (#work-<slug>): a big curved glass slab front and centre,
 // the next screenshot on a larger, steeper card half off the right edge, a small faded one on the
-// left. Fades in block by block, switches screenshot every third of the scroll, and hands the
-// current screenshot to the backdrop so the whole room takes on its colours.
+// left. The set swings in from the right around the dome centre, settles in front of the glass A,
+// crossfades its screenshot every third of the scroll, and swings out to the left; the current
+// screenshot also tints the room.
 function WorkScene({ work }: { work: Work }) {
   const textures = useTexture(
     work.images.map((i) => i.src),
@@ -65,6 +67,7 @@ function WorkScene({ work }: { work: Work }) {
       }),
   )
   const { viewport } = useThree()
+  const pivot = useRef<THREE.Group>(null)
   const group = useRef<THREE.Group>(null)
   const left = useRef<THREE.Mesh>(null)
   const right = useRef<THREE.Mesh>(null)
@@ -82,20 +85,26 @@ function WorkScene({ work }: { work: Work }) {
 
   useFrame((state, dt) => {
     const g = group.current
+    const pv = pivot.current
     const el = document.getElementById(`work-${work.slug}`)
-    if (!g || !el) return
+    if (!g || !pv || !el) return
     const r = el.getBoundingClientRect()
     const vh = window.innerHeight
     const p = clamp01((vh - r.top) / (r.height + vh))
-    const vis = smooth(0.02, 0.16, p) * (1 - smooth(0.86, 0.98, p))
-    g.visible = vis > 0.001
-    if (!g.visible) {
+    // Consecutive projects overlap in p by 0.75 (300vh article vs 100vh viewport), so a project is
+    // fully gone by 0.84 and the next starts arriving at its own 0.1 (= 0.85 of this one): clean handoff,
+    // with a beat where only the A shows.
+    const vis = smooth(0.1, 0.22, p) * (1 - smooth(0.72, 0.84, p))
+    pv.visible = vis > 0.001
+    // swing: from the right into centre, hold, out to the left (positive turn moves things left)
+    pv.rotation.y = -SWING * (1 - smooth(0.08, 0.26, p)) + SWING * smooth(0.68, 0.86, p)
+    if (!pv.visible) {
       if (ambient.owner === work.slug) ambient.amount = 0
       return
     }
 
-    // which screenshot: thirds of the pinned stretch
-    const idx = Math.min(n - 1, Math.floor(clamp01((p - 0.16) / 0.68) * n))
+    // which screenshot: thirds of the hold
+    const idx = Math.min(n - 1, Math.floor(clamp01((p - 0.26) / 0.42) * n))
     const s = swap.current
     if (idx !== s.to) {
       s.from = s.to
@@ -131,18 +140,18 @@ function WorkScene({ work }: { work: Work }) {
 
     // drift through the viewport while pinned, lean towards the pointer
     const k = 1 - Math.exp(-dt * 4)
-    const targetX = mobile ? 0 : viewport.width * 0.04
-    const targetY = (0.5 - p) * viewport.height * 0.16 + (mobile ? viewport.height * 0.14 : viewport.height * 0.06)
-    g.position.x += (targetX - g.position.x) * k
+    const targetY = (0.5 - p) * viewport.height * 0.1 + (mobile ? viewport.height * 0.14 : viewport.height * 0.06)
     g.position.y += (targetY - g.position.y) * k
-    g.rotation.y += (input.pointer.x * 0.1 + (0.5 - p) * 0.24 - g.rotation.y) * k
+    g.rotation.y += (input.pointer.x * 0.1 - g.rotation.y) * k
     g.rotation.x += (-input.pointer.y * 0.05 - g.rotation.x) * k
     if (right.current) right.current.position.y = -mainW * 0.02 + Math.sin(t * 0.6 + 2) * 0.05
     if (left.current) left.current.position.y = mainW * 0.16 + Math.sin(t * 0.7) * 0.05
   })
 
   return (
-    <group ref={group} visible={false}>
+    <group ref={pivot} position={PIVOT} visible={false}>
+      {/* screens sit 2 units in front of the pivot, i.e. at world z = 0, in front of the receded A */}
+      <group ref={group} position-z={-PIVOT.z}>
       <Screen mat={mainMat} width={mainW} bend={0.05} segments={48} />
       {/* backing plate a little behind: shows as the slab's thickness when it turns */}
       <Screen mat={backMat} width={mainW * 1.005} bend={0.05} segments={48} back position-z={-0.12} />
@@ -152,6 +161,7 @@ function WorkScene({ work }: { work: Work }) {
           <Screen mat={leftMat} meshRef={left} width={leftW} bend={0.15} segments={16} dim={0.45} position={[-(mainW / 2 + leftW * 0.35), 0, -0.6]} rotation-y={0.6} />
         </>
       )}
+      </group>
     </group>
   )
 }

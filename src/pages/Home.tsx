@@ -54,6 +54,23 @@ export default function Home() {
     }
   }, [])
 
+  // works captions: fade in once the screens have swung in, out before they swing away
+  // (article progress p = (vh - top) / (height + vh); see src/three/Works.tsx)
+  useEffect(() => {
+    const triggers = gsap.utils.toArray<HTMLElement>('[id^="work-"]').map((article) => {
+      const caption = article.querySelectorAll('.wk-caption > *')
+      const pAt = (v: number) => `top ${100 - v * 400}%` // article top position at progress p (300vh article)
+      return gsap.timeline({ scrollTrigger: { trigger: article, start: pAt(0.18), end: pAt(0.8), scrub: true } })
+        .fromTo(caption, { opacity: 0 }, { opacity: 1, duration: 0.1, ease: 'none' })
+        .to(caption, { opacity: 1, duration: 0.8 })
+        .to(caption, { opacity: 0, duration: 0.1, ease: 'none' })
+    })
+    return () => triggers.forEach((tl) => {
+      tl.scrollTrigger?.kill()
+      tl.kill()
+    })
+  }, [])
+
   // #works etc. from the nav or another page: scroll there once the page (and loader) allow it
   const { hash } = useLocation()
   useEffect(() => {
@@ -115,6 +132,8 @@ export default function Home() {
                     <img key={img.src} src={img.src} alt={img.alt} loading="lazy" className="w-full rounded-lg" />
                   ))}
                 </div>
+                {/* caption fades with the screens (in after they swing in, out before they swing away) */}
+                <div className="wk-caption contents">
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-bg via-bg/70 to-transparent -mx-4 sm:-mx-8" aria-hidden />
                 <div className="relative flex flex-wrap items-end justify-between gap-6">
                   <div className="max-w-xl">
@@ -137,6 +156,7 @@ export default function Home() {
                     <span className="border-b border-transparent transition-colors group-hover:border-fg">View case study</span>
                     <span className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">↗</span>
                   </TLink>
+                </div>
                 </div>
               </div>
             </article>

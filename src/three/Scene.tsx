@@ -82,7 +82,10 @@ function Prism({ low }: { low: boolean }) {
     // finale: 0 while #contact is below the fold, 1 once its top reaches the top of the viewport
     const contact = document.getElementById('contact')
     const cp = contact ? Math.min(1, Math.max(0, (window.innerHeight - contact.getBoundingClientRect().top) / window.innerHeight)) : 0
-    const active = sp < 0.999 || cp > 0.01
+    // stays through the works (screens swing in front of it) and leaves as About comes up
+    const about = document.getElementById('about')
+    const ap = about ? Math.min(1, Math.max(0, (window.innerHeight - about.getBoundingClientRect().top) / window.innerHeight)) : 0
+    const active = ap < 0.999 || cp > 0.01
     if (active !== onStage) setOnStage(active)
     const k = 1 - Math.exp(-dt * 4) // frame-rate independent smoothing
     // intro: grow from 55% with a little overshoot while spinning into place
@@ -103,11 +106,13 @@ function Prism({ low }: { low: boolean }) {
       // up beside the email / buttons, clear of the pressure wordmark below
       m.position.set(mobile ? 0 : viewport.width * 0.35, -viewport.height * 0.9 * (1 - e) + viewport.height * (mobile ? 0.28 : 0.2), 0)
     } else {
-      // stays centre stage through the interlude, then lifts and recedes as the first project arrives
-      const exit = THREE.MathUtils.smoothstep(sp, 0.86, 1)
+      // centre stage through the interlude; steps back as the first project swings in so the
+      // screens pass in front of it; lifts away as About arrives
+      const back = THREE.MathUtils.smoothstep(sp, 0.86, 1)
+      const exit = THREE.MathUtils.smoothstep(ap, 0.1, 0.9)
       m.position.x += (0 - m.position.x) * k
-      m.position.y += (exit * viewport.height * 0.8 - m.position.y) * k
-      m.position.z += (-exit * 3 - m.position.z) * k
+      m.position.y += (exit * viewport.height * 0.9 - m.position.y) * k
+      m.position.z += (-back * 2.5 - exit * 2 - m.position.z) * k
     }
 
     if (!onStage || !mat.current) return
