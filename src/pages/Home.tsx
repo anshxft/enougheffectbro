@@ -13,6 +13,7 @@ import HeroHud from '../components/HeroHud'
 import { ThinkingOrb } from 'thinking-orbs'
 import Loader from '../components/Loader'
 import Services from '../components/Services'
+import Stack from '../components/Stack'
 import Section from '../components/Section'
 import { site, works } from '../content'
 import { prefersReducedMotion, scrollToTarget, scrollToY, useSmoothScroll } from '../lib/smooth-scroll'
@@ -216,6 +217,7 @@ export default function Home() {
 
         <About />
         <Services />
+        <Stack />
         <Experience />
         <Contact />
       </main>

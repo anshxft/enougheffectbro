@@ -1,4 +1,18 @@
 // All site copy lives here so text changes never touch components.
+import {
+  siGithub,
+  siGsap,
+  siNextdotjs,
+  siOpenzeppelin,
+  siReact,
+  siSolidity,
+  siTailwindcss,
+  siThreedotjs,
+  siTypescript,
+  siVercel,
+  siVite,
+  siWagmi,
+} from 'simple-icons'
 
 export const site = {
   name: 'Ansh',
@@ -108,4 +122,24 @@ export const experience = [
   { year: '2026', title: 'PredictArc', body: 'Prediction markets live on Arc mainnet.' },
   { year: '2026', title: 'Heldby', body: 'USDC escrow with an AI arbiter on Arc.' },
   { year: 'Now', title: 'Student', body: '18, building and trading.' },
+]
+
+// Stack wall. icon = simple-icons logo path; tools without one get a monogram.
+export const stack: { name: string; group: string; note: string; icon?: { path: string } }[] = [
+  { name: 'Solidity', group: 'Contracts', note: 'PredictArc and Heldby contracts', icon: siSolidity },
+  { name: 'Foundry', group: 'Contracts', note: "Heldby's contract tests" },
+  { name: 'Hardhat', group: 'Contracts', note: 'PredictArc deploys and tests' },
+  { name: 'OpenZeppelin', group: 'Contracts', note: 'Battle-tested pieces in Heldby', icon: siOpenzeppelin },
+  { name: 'wagmi', group: 'Web3', note: 'Wallet connect in Heldby', icon: siWagmi },
+  { name: 'viem', group: 'Web3', note: 'Chain reads in both apps' },
+  { name: 'React', group: 'Frontend', note: 'Every frontend I ship', icon: siReact },
+  { name: 'Next.js', group: 'Frontend', note: "Heldby's app", icon: siNextdotjs },
+  { name: 'TypeScript', group: 'Frontend', note: 'Across every project', icon: siTypescript },
+  { name: 'Tailwind', group: 'Frontend', note: 'PredictArc and this site', icon: siTailwindcss },
+  { name: 'Vite', group: 'Frontend', note: 'PredictArc and this site', icon: siVite },
+  { name: 'three.js', group: 'Motion', note: 'The glass loop on this site', icon: siThreedotjs },
+  { name: 'GSAP', group: 'Motion', note: 'Every scroll animation here', icon: siGsap },
+  { name: 'Lenis', group: 'Motion', note: 'The smooth scroll you feel' },
+  { name: 'Vercel', group: 'Ship', note: 'Hosting and serverless functions', icon: siVercel },
+  { name: 'GitHub', group: 'Ship', note: 'Code, history, deploys', icon: siGithub },
 ]
