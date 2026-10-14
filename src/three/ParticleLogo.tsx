@@ -9,7 +9,7 @@ import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRe
 // and tumble in turbulence before settling back. A glowing core sits under a closed skin and lights
 // up where the skin is parted. Switching logos kicks the beads loose to re-form in a staggered wave.
 
-const SIDE = 256
+const SIDE = 192
 const COUNT = SIDE * SIDE
 const SIZE = 3.4 // logo height in world units
 type Sampled = { pos: Float32Array; nrm: Float32Array }
@@ -251,23 +251,59 @@ const beadVertex = /* glsl */ `
     gl_PointSize = uHalo > 0.5 ? (p.w < 0.05 ? 0.0 : size * 5.0) : size;
   }
 `
-const beadFragment = /* glsl */ `
+// each bead is drawn as a small cube: instanced box, placed by the simulation, tumbling while it glows
+const cubeVertex = /* glsl */ `
+  uniform sampler2D tPos;
+  uniform sampler2D tNA;
+  uniform sampler2D tNB;
+  uniform sampler2D tAux;
+  uniform float uSince;
+  uniform float uTime;
+  attribute vec2 aRef;
+  attribute float aScale;
+  attribute vec4 aSpin; // xyz axis, w starting angle
   varying float vGlow;
   varying float vLight;
+  varying float vFace;
+  varying float vCore;
+  varying float vDepth;
+  vec3 rot(vec3 v, vec3 k, float a) {
+    return v * cos(a) + cross(k, v) * sin(a) + k * dot(k, v) * (1.0 - cos(a));
+  }
+  void main() {
+    vec4 p = texture2D(tPos, aRef);
+    vec4 aux = texture2D(tAux, aRef);
+    float k = clamp((uSince - aux.r * 0.6) / 0.25, 0.0, 1.0);
+    vec3 nrm = k > 0.5 ? texture2D(tNB, aRef).xyz : texture2D(tNA, aRef).xyz;
+    // skin cubes interlock into a closed surface, core cubes are smaller; glowing ones swell a little
+    float edge = 0.03 * aScale * mix(1.15, 0.7, aux.b) * (1.0 + p.w * 0.35);
+    float ang = aSpin.w + uTime * (0.15 + p.w * 3.5);
+    vec3 axis = normalize(aSpin.xyz);
+    vec4 mv = modelViewMatrix * vec4(p.xyz + rot(position * edge, axis, ang), 1.0);
+    gl_Position = projectionMatrix * mv;
+    // the logo's surface sets the tone; each cube face adds its own facet light
+    vec3 sn = normalize(normalMatrix * nrm);
+    float key = max(dot(sn, normalize(vec3(-0.35, 0.8, 0.45))), 0.0);
+    float fill = max(dot(sn, normalize(vec3(0.6, -0.2, 0.75))), 0.0);
+    vLight = key * 0.85 + fill * 0.25 + 0.06;
+    vec3 fn = normalize(normalMatrix * rot(normal, axis, ang));
+    vFace = max(dot(fn, normalize(vec3(-0.45, 0.6, 0.65))), 0.0);
+    vGlow = p.w;
+    vCore = aux.b;
+    vDepth = -mv.z;
+  }
+`
+const cubeFragment = /* glsl */ `
+  varying float vGlow;
+  varying float vLight;
+  varying float vFace;
   varying float vCore;
   varying float vDepth;
   void main() {
-    vec2 c = gl_PointCoord * 2.0 - 1.0;
-    c.y = -c.y;
-    float r2 = dot(c, c);
-    if (r2 > 1.0) discard;
-    vec3 n = vec3(c, sqrt(1.0 - r2));
-    float diff = max(dot(n, normalize(vec3(-0.45, 0.6, 0.65))), 0.0);
-    // linear values (shown ~2x brighter): slate grey lit by the surface, each bead's sphere adds grain
-    vec3 col = mix(vec3(0.012, 0.014, 0.018), vec3(0.34, 0.36, 0.4), vLight * (0.55 + diff * 0.6));
-    col += pow(1.0 - n.z, 2.0) * 0.08;
-    // glowing beads burn cool white from inside, the core brightest
-    vec3 hot = vec3(0.92, 0.97, 1.05) * (0.9 + n.z * 0.8) * mix(1.0, 1.6, vCore);
+    // linear values (shown ~2x brighter): slate grey, crisp per-face shading
+    vec3 col = mix(vec3(0.012, 0.014, 0.018), vec3(0.36, 0.38, 0.42), vLight * (0.45 + vFace * 0.75));
+    // glowing cubes burn cool white from inside, the core brightest
+    vec3 hot = vec3(0.92, 0.97, 1.05) * (0.85 + vFace * 0.8) * mix(1.0, 1.6, vCore);
     col = mix(col, hot, vGlow * mix(0.8, 1.0, vCore));
     col *= mix(1.0, 0.55, smoothstep(5.0, 9.0, vDepth));
     gl_FragColor = vec4(col, 1.0);
@@ -356,8 +392,22 @@ function buildSim(shapes: string[], gl: THREE.WebGLRenderer) {
     uSize: { value: 0 },
     uSince: { value: 10 },
     uHalo: { value: 0 },
+    uTime: { value: 0 },
   }
-  const beads = new THREE.ShaderMaterial({ vertexShader: beadVertex, fragmentShader: beadFragment, uniforms })
+  // cubes: one box, instanced per bead
+  const box = new THREE.BoxGeometry(1, 1, 1)
+  const cubes = new THREE.InstancedBufferGeometry()
+  cubes.index = box.index
+  cubes.setAttribute('position', box.attributes.position)
+  cubes.setAttribute('normal', box.attributes.normal)
+  cubes.setAttribute('aRef', new THREE.InstancedBufferAttribute(ref, 2))
+  cubes.setAttribute('aScale', new THREE.InstancedBufferAttribute(geo.attributes.aScale.array as Float32Array, 1))
+  const spin = new Float32Array(COUNT * 4)
+  for (let i = 0; i < COUNT; i++) spin.set([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, Math.random() * 6.283], i * 4)
+  cubes.setAttribute('aSpin', new THREE.InstancedBufferAttribute(spin, 4))
+  cubes.instanceCount = COUNT
+  cubes.boundingSphere = geo.boundingSphere
+  const beads = new THREE.ShaderMaterial({ vertexShader: cubeVertex, fragmentShader: cubeFragment, uniforms })
   // the halo shares the same uniform objects, only uHalo differs
   const halo = new THREE.ShaderMaterial({
     vertexShader: beadVertex,
@@ -367,20 +417,20 @@ function buildSim(shapes: string[], gl: THREE.WebGLRenderer) {
     depthWrite: false,
     transparent: true,
   })
-  return { gpu, posVar, velVar, pos, nrm, aux, geo, beads, halo, from: 0, to: 0, switchedAt: -10, strength: 0, kick: false }
+  return { gpu, posVar, velVar, pos, nrm, aux, geo, cubes, box, beads, halo, from: 0, to: 0, switchedAt: -10, strength: 0, kick: false }
 }
 
 function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; hovered: React.RefObject<boolean> }) {
   const group = useRef<THREE.Group>(null)
   const { camera, raycaster, pointer, gl } = useThree()
   const simRef = useRef<ReturnType<typeof buildSim> | null>(null)
-  const beads = useRef<THREE.Points>(null)
+  const beads = useRef<THREE.Mesh>(null)
   const halo = useRef<THREE.Points>(null)
 
   useEffect(() => {
     const sim = buildSim(shapes, gl)
     simRef.current = sim
-    beads.current!.geometry = sim.geo
+    beads.current!.geometry = sim.cubes
     beads.current!.material = sim.beads
     halo.current!.geometry = sim.geo
     halo.current!.material = sim.halo
@@ -388,6 +438,8 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
       simRef.current = null
       sim.gpu.dispose()
       sim.geo.dispose()
+      sim.cubes.dispose()
+      sim.box.dispose()
       sim.beads.dispose()
       sim.halo.dispose()
       for (const t of [...sim.pos, ...sim.nrm, sim.aux]) t.dispose()
@@ -450,11 +502,12 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     ru.tNB.value = sim.nrm[sim.to]
     ru.uSince.value = since
     ru.uSize.value = 0.032 * gl.domElement.height
+    ru.uTime.value = t
   })
 
   return (
     <group ref={group} position={[0, 0.18, 0]}>
-      <points ref={beads} />
+      <mesh ref={beads} frustumCulled={false} />
       <points ref={halo} renderOrder={1} />
     </group>
   )
