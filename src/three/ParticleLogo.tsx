@@ -10,7 +10,7 @@ import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.j
 // into the next shape in a staggered wave. The simulation is a small CPU loop; the beads are
 // screen-facing points shaded like spheres, so thousands cost almost nothing to draw.
 
-const COUNT = 7000
+const COUNT = 18000
 const SIZE = 3 // logo height in world units
 
 // sample COUNT points over the surface of an SVG path (24×24 viewBox) extruded into a slab
@@ -38,13 +38,14 @@ function samplePath(d: string) {
 
 const vertexShader = /* glsl */ `
   attribute float aGlow;
+  attribute float aScale;
   uniform float uSize;
   varying float vGlow;
   varying float vDepth;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = uSize / -mv.z;
+    gl_PointSize = uSize * aScale / -mv.z;
     vGlow = aGlow;
     vDepth = -mv.z;
   }
@@ -60,8 +61,11 @@ const fragmentShader = /* glsl */ `
     vec3 n = vec3(c, sqrt(1.0 - r2));
     float diff = max(dot(n, normalize(vec3(-0.45, 0.6, 0.65))), 0.0);
     float rim = pow(1.0 - n.z, 2.0);
-    vec3 col = mix(vec3(0.22, 0.235, 0.255), vec3(0.86, 0.88, 0.9), diff * 0.9 + 0.08);
-    col += rim * 0.08 + vGlow * vec3(0.55, 0.6, 0.65);
+    // resting beads are a cool slate grey, so the touched (lit) ones read as white
+    vec3 col = mix(vec3(0.03, 0.035, 0.045), vec3(0.3, 0.32, 0.36), diff * 0.9 + 0.08); // linear values, shown ~2x brighter
+    col += rim * 0.08;
+    // touched beads light up from inside: cool white, a touch overexposed
+    col = mix(col, vec3(1.0, 1.02, 1.06) * (1.1 + diff * 0.4), vGlow * 0.9);
     // farther beads sink into the dark a little
     col *= mix(1.0, 0.55, smoothstep(5.0, 9.0, vDepth));
     gl_FragColor = vec4(col, 1.0);
@@ -77,12 +81,19 @@ function createSim(start: Float32Array) {
   const vel = new Float32Array(COUNT * 3)
   const glow = new Float32Array(COUNT)
   const delay = new Float32Array(COUNT).map(() => Math.random())
+  const phase = new Float32Array(COUNT).map(() => Math.random() * 6.283)
+  // most beads hold their place; a few are loose and drift off like smoke, more so at the tips
+  const loose = new Float32Array(COUNT).map((_, i) => Math.random() ** 14 * (0.15 + (0.35 * Math.hypot(start[i * 3], start[i * 3 + 1])) / SIZE))
+  const sinPh = phase.map(Math.sin)
+  const cosPh = phase.map(Math.cos)
+  const scale = new Float32Array(COUNT).map(() => 0.55 + Math.random() * 0.7)
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage))
   geo.setAttribute('aGlow', new THREE.BufferAttribute(glow, 1).setUsage(THREE.DynamicDrawUsage))
+  geo.setAttribute('aScale', new THREE.BufferAttribute(scale, 1))
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), SIZE * 1.5)
   const mat = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms: { uSize: { value: 0 } } })
-  return { pos, vel, glow, delay, geo, mat, from: 0, to: 0, switchedAt: -10, strength: 0 }
+  return { pos, vel, glow, delay, sinPh, cosPh, loose, geo, mat, from: 0, to: 0, switchedAt: -10, strength: 0 }
 }
 
 function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; hovered: React.RefObject<boolean> }) {
@@ -121,11 +132,11 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     const dt = Math.min(rawDt, 1 / 30)
     const t = state.clock.elapsedTime
     const p = points.current!
-    // slow turn, nudged by the pointer
-    p.rotation.y = Math.sin(t * 0.35) * 0.55 + pointer.x * 0.25
-    p.rotation.x = -0.12 + Math.sin(t * 0.27) * 0.08 - pointer.y * 0.12
+    // keeps turning round, nudged by the pointer
+    p.rotation.y = t * 0.4 + pointer.x * 0.3
+    p.rotation.x = -0.1 + Math.sin(t * 0.27) * 0.1 - pointer.y * 0.12
     p.updateMatrixWorld()
-    mat.uniforms.uSize.value = 0.05 * gl.domElement.height * 1.1
+    mat.uniforms.uSize.value = 0.036 * gl.domElement.height
 
     // cursor ray in the logo's own space
     raycaster.setFromCamera(pointer, camera)
@@ -134,7 +145,11 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     local.d.copy(raycaster.ray.direction).transformDirection(local.inv)
     sim.strength += ((hovered.current ? 1 : 0) - sim.strength) * Math.min(1, dt * 6)
 
-    const { pos, vel, glow, delay } = sim
+    const { pos, vel, glow, delay, sinPh, cosPh, loose } = sim
+    // sin(t·w + phase) per bead without calling sin in the loop: precompute sin/cos(t·w) once
+    const s1 = Math.sin(t * 0.9), c1 = Math.cos(t * 0.9)
+    const s2 = Math.sin(t * 0.7), c2 = Math.cos(t * 0.7)
+    const s3 = Math.sin(t * 0.5), c3 = Math.cos(t * 0.5)
     const since = performance.now() / 1000 - sim.switchedAt
     const a = targets[sim.from]
     const b = targets[sim.to]
@@ -144,18 +159,23 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
       const j = i * 3
       // staggered re-form: each bead switches target after its own delay, drifting loose in between
       const k = Math.min(1, Math.max(0, (since - delay[i] * 0.6) / 0.25))
-      const tx = a[j] + (b[j] - a[j]) * k
-      const ty = a[j + 1] + (b[j + 1] - a[j + 1]) * k
-      const tz = a[j + 2] + (b[j + 2] - a[j + 2]) * k
-      const loose = since < 1.2 ? 1 - k : 0
-      const spring = 22 * (1 - loose * 0.85)
+      let tx = a[j] + (b[j] - a[j]) * k
+      let ty = a[j + 1] + (b[j + 1] - a[j + 1]) * k
+      let tz = a[j + 2] + (b[j + 2] - a[j + 2]) * k
+      // always alive: every bead drifts a little in a slow flow field, the loose ones a lot
+      const sp0 = sinPh[i]
+      const cp0 = cosPh[i]
+      const amp = 0.02 + loose[i]
+      tx += (s1 * cp0 + c1 * sp0) * amp
+      ty += (c2 * cp0 - s2 * sp0) * amp + (s3 * cp0 + c3 * sp0) * loose[i] * 0.5
+      tz += (s2 * sp0 - c1 * cp0) * amp
+      const free = since < 1.2 ? 1 - k : 0
+      const spring = 22 * (1 - free * 0.85)
       let fx = (tx - pos[j]) * spring
       let fy = (ty - pos[j + 1]) * spring
       let fz = (tz - pos[j + 2]) * spring
-      // a little life even at rest
-      fx += Math.sin(t * 1.3 + i * 0.37) * 0.25
-      fy += Math.cos(t * 1.1 + i * 0.53) * 0.25
-      // push away from the cursor ray
+      // push away from the cursor ray; beads near it light up
+      let lit = 0
       if (sim.strength > 0.01) {
         const wx = pos[j] - local.o.x
         const wy = pos[j + 1] - local.o.y
@@ -165,6 +185,7 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
         const dy = wy - local.d.y * along
         const dz = wz - local.d.z * along
         const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+        if (dist < 1.1) lit = (1 - dist / 1.1) ** 1.5 * sim.strength
         if (dist < R && dist > 1e-4) {
           const push = (1 - dist / R) ** 2 * 260 * sim.strength
           fx += (dx / dist) * push + local.d.y * push * 0.3
@@ -180,7 +201,9 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
       pos[j + 2] += vel[j + 2] * dt
       // moving beads catch the light
       const sp = Math.abs(vel[j]) + Math.abs(vel[j + 1]) + Math.abs(vel[j + 2])
-      glow[i] += (Math.min(1, sp * 0.35) - glow[i]) * Math.min(1, dt * 8)
+      const want = Math.max(lit, Math.min(1, sp * 0.3))
+      // light comes on fast and fades slowly, leaving a soft trail
+      glow[i] += (want - glow[i]) * Math.min(1, dt * (want > glow[i] ? 10 : 2.5))
     }
     sim.geo.attributes.position.needsUpdate = true
     sim.geo.attributes.aGlow.needsUpdate = true
