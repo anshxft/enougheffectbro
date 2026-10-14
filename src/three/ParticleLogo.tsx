@@ -18,23 +18,21 @@ const SIZE = 3.4 // logo height in world units
 type Sampled = { pos: Float32Array; nrm: Float32Array }
 
 // `thin` marks (the X with its fine double stroke) keep a shallow bevel so their gaps stay open
-function svgSolid(d: string, thin: boolean) {
-  const data = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="${d}"/></svg>`)
-  const shapes = data.paths.flatMap((p) => SVGLoader.createShapes(p))
-  const geo = new THREE.ExtrudeGeometry(
-    shapes,
-    thin
-      ? { depth: 3.2, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.35, bevelSegments: 3, curveSegments: 12 }
-      : { depth: 2.4, bevelEnabled: true, bevelThickness: 1.3, bevelSize: 0.45, bevelSegments: 5, curveSegments: 12 },
-  )
-  geo.scale(1, -1, 1) // SVG y points down
-  return geo
-}
+const extrusion = (thin: boolean) =>
+  thin
+    ? { depth: 3.2, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.35, bevelSegments: 3, curveSegments: 12 }
+    : { depth: 2.4, bevelEnabled: true, bevelThickness: 1.3, bevelSize: 0.45, bevelSegments: 5, curveSegments: 12 }
+
+const SURFACE = 0.5 // share of beads on the skin; the rest fill the inside so the mark is solid all through
 
 // shape is an SVG path in a 24×24 box; a leading "thin:" marks a fine-stroked logo
 function sample(shape: string): Sampled {
   const thin = shape.startsWith('thin:')
-  let geo: THREE.BufferGeometry = svgSolid(thin ? shape.slice(5) : shape, thin)
+  const d = thin ? shape.slice(5) : shape
+  const opts = extrusion(thin)
+  const data = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="${d}"/></svg>`)
+  let geo: THREE.BufferGeometry = new THREE.ExtrudeGeometry(data.paths.flatMap((p) => SVGLoader.createShapes(p)), opts)
+  geo.scale(1, -1, 1) // SVG y points down
   geo = geo.index ? geo.toNonIndexed() : geo
   geo.computeVertexNormals()
   geo.computeBoundingBox()
@@ -44,14 +42,34 @@ function sample(shape: string): Sampled {
   geo.translate(-c.x, -c.y, -c.z)
   geo.scale(s, s, s)
   const sampler = new MeshSurfaceSampler(new THREE.Mesh(geo)).build()
+
+  // the inside: random points in the path's 2D outline (the canvas tests containment) at any depth
+  const ctx = document.createElement('canvas').getContext('2d')!
+  const outline = new Path2D(d)
+  const z0 = -opts.bevelThickness * 0.6
+  const z1 = opts.depth + opts.bevelThickness * 0.6
+
   const pos = new Float32Array(COUNT * 3)
   const nrm = new Float32Array(COUNT * 3)
   const v = new THREE.Vector3()
   const n = new THREE.Vector3()
   for (let i = 0; i < COUNT; i++) {
-    sampler.sample(v, n)
-    // a little jitter off the surface so it reads as a heap of beads, not a skin
-    v.addScaledVector(n, (Math.random() - 0.3) * 0.05)
+    if (Math.random() < SURFACE) {
+      sampler.sample(v, n)
+      // a little jitter off the surface so it reads as a heap of beads, not a skin
+      v.addScaledVector(n, (Math.random() - 0.3) * 0.05)
+    } else {
+      let x = 0
+      let y = 0
+      do {
+        x = Math.random() * 24
+        y = Math.random() * 24
+      } while (!ctx.isPointInPath(outline, x, y))
+      const z = z0 + Math.random() * (z1 - z0)
+      v.set((x - c.x) * s, (-y - c.y) * s, (z - c.z) * s)
+      // light inner beads as if facing the nearer front/back face
+      n.set(0, 0, z > (z0 + z1) / 2 ? 1 : -1)
+    }
     pos.set([v.x, v.y, v.z], i * 3)
     nrm.set([n.x, n.y, n.z], i * 3)
   }
