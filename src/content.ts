@@ -159,7 +159,7 @@ export const stack: { name: string; group: string; note: string; icon?: { path: 
 // The elsewhere page: a quiet valley you walk through as a little hiker
 export const elsewhere = {
   intro: 'Step outside.',
-  hint: 'Scroll, or hold → to walk',
+  hint: 'Scroll or hold W to walk · Shift to run · mouse to look around',
   hintTouch: 'Swipe up to walk',
   outro: 'Stay as long as you like.',
   back: 'Back to the studio',
