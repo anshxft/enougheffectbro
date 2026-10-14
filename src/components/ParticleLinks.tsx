@@ -59,8 +59,10 @@ export default function ParticleLinks() {
       }}
       className="relative h-[min(78svh,760px)] outline-none"
     >
-      {/* a pool of darkness behind the mark so the busy room doesn't fight the beads */}
+      {/* a pool of darkness behind the mark so the busy room doesn't fight the beads, and a soft
+          backlight in it so the dark obsidian mark stands out as a silhouette */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgb(5_5_5/0.9),rgb(5_5_5/0.55)_60%,transparent)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgb(242_242_242/0.3),rgb(242_242_242/0.1)_40%,transparent_70%)]" />
       {near && (
         <Suspense fallback={null}>
           <ParticleLogo shapes={SHAPES} index={index} active={visible} onPick={open} />
