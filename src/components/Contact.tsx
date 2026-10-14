@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import { useGSAP } from '@gsap/react'
 import { site } from '../content'
+import ParticleLinks from './ParticleLinks'
 import PressureWordmark from './PressureWordmark'
 
 const LiquidLogo = lazy(() => import('./LiquidLogo'))
@@ -136,6 +137,10 @@ export default function Contact() {
             </Magnetic>
           ))}
         </div>
+      </div>
+
+      <div className="mt-16">
+        <ParticleLinks />
       </div>
 
       <div className="mt-24">
