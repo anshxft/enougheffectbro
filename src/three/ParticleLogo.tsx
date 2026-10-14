@@ -9,132 +9,7 @@ import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRe
 // and tumble in turbulence before settling back. A glowing core sits under a closed skin and lights
 // up where the skin is parted. Switching logos kicks the beads loose to re-form in a staggered wave.
 
-const SIDE = 256
-const COUNT = SIDE * SIDE
-const SIZE = 3.4 // logo height in world units
-type Sampled = { pos: Float32Array; nrm: Float32Array }
-
-// Every mark is "inflated" like igloo's: the 2D outline is thickened by `grow`, then puffed into a
-// pillow whose half-thickness rises in a quarter circle of radius `round` from the edge inwards,
-// so strokes become round tubes from every side. Built on a distance field of the outline.
-const GRID = 192
-const SPAN = 30 // grid covers -3..27 of the 24-unit icon box
-const CELL = SPAN / GRID
-// the first SURFACE share of beads (by index, the same in every shape) form a closed skin; the rest
-// are a glowing core that only shows where the cursor parts the skin
-const SURFACE = 0.7
-
-// chamfer distance (in icon units) from each cell to the nearest cell where `hit` is true
-function distanceTo(hit: (i: number) => boolean) {
-  const d = new Float32Array(GRID * GRID).map((_, i) => (hit(i) ? 0 : 1e9))
-  const D = Math.SQRT2
-  const relax = (i: number, j: number, c: number) => {
-    if (d[j] + c < d[i]) d[i] = d[j] + c
-  }
-  for (let y = 0; y < GRID; y++)
-    for (let x = 0; x < GRID; x++) {
-      const i = y * GRID + x
-      if (x > 0) relax(i, i - 1, 1)
-      if (y > 0) {
-        relax(i, i - GRID, 1)
-        if (x > 0) relax(i, i - GRID - 1, D)
-        if (x < GRID - 1) relax(i, i - GRID + 1, D)
-      }
-    }
-  for (let y = GRID - 1; y >= 0; y--)
-    for (let x = GRID - 1; x >= 0; x--) {
-      const i = y * GRID + x
-      if (x < GRID - 1) relax(i, i + 1, 1)
-      if (y < GRID - 1) {
-        relax(i, i + GRID, 1)
-        if (x < GRID - 1) relax(i, i + GRID + 1, D)
-        if (x > 0) relax(i, i + GRID - 1, D)
-      }
-    }
-  return d.map((v) => v * CELL)
-}
-
-// shape is an SVG path in a 24×24 box; a leading "thin:" marks a fine-stroked logo that needs more growth
-function sample(shape: string): Sampled {
-  const thin = shape.startsWith('thin:')
-  const path = new Path2D(thin ? shape.slice(5) : shape)
-  const grow = thin ? 1.0 : 0.35
-  const round = thin ? 2.1 : 1.8
-  const ctx = document.createElement('canvas').getContext('2d')!
-  const inside = new Uint8Array(GRID * GRID)
-  for (let y = 0; y < GRID; y++)
-    for (let x = 0; x < GRID; x++) inside[y * GRID + x] = ctx.isPointInPath(path, -3 + (x + 0.5) * CELL, -3 + (y + 0.5) * CELL) ? 1 : 0
-  const toOut = distanceTo((i) => !inside[i])
-  const toIn = distanceTo((i) => !!inside[i])
-  // half-thickness of the pillow at each cell (0 outside the grown outline)
-  const half = new Float32Array(GRID * GRID).map((_, i) => {
-    const e = (inside[i] ? toOut[i] : -toIn[i]) + grow
-    if (e <= 0) return 0
-    const k = Math.min(e, round)
-    return Math.sqrt(round * round - (round - k) ** 2)
-  })
-  const at = (x: number, y: number) => {
-    const fx = Math.min(GRID - 1.001, Math.max(0, (x + 3) / CELL - 0.5))
-    const fy = Math.min(GRID - 1.001, Math.max(0, (y + 3) / CELL - 0.5))
-    const ix = Math.floor(fx)
-    const iy = Math.floor(fy)
-    const tx = fx - ix
-    const ty = fy - iy
-    const i = iy * GRID + ix
-    const top = half[i] + (half[i + 1] - half[i]) * tx
-    const bot = half[i + GRID] + (half[i + GRID + 1] - half[i + GRID]) * tx
-    return top + (bot - top) * ty
-  }
-
-  const pos = new Float32Array(COUNT * 3)
-  const nrm = new Float32Array(COUNT * 3)
-  const n = new THREE.Vector3()
-  for (let i = 0; i < COUNT; i++) {
-    const skin = i < COUNT * SURFACE
-    let x = 0
-    let y = 0
-    let h = 0
-    let gx = 0
-    let gy = 0
-    for (;;) {
-      x = -3 + Math.random() * SPAN
-      y = -3 + Math.random() * SPAN
-      h = at(x, y)
-      if (h <= 0.02) continue
-      // the core stays well inside: only where the pillow is thick
-      if (!skin) {
-        if (h > round * 0.55) break
-        continue
-      }
-      // skin beads: accept in proportion to the surface's slope so steep sides aren't sparse
-      gx = (at(x + CELL, y) - at(x - CELL, y)) / (2 * CELL)
-      gy = (at(x, y + CELL) - at(x, y - CELL)) / (2 * CELL)
-      if (Math.random() * 5 < Math.min(5, Math.sqrt(1 + gx * gx + gy * gy))) break
-    }
-    const side = Math.random() < 0.5 ? -1 : 1
-    let z: number
-    if (skin) {
-      z = side * h
-      // icon y points down; the normal's y flips with it
-      n.set(-gx, gy, side).normalize()
-    } else {
-      z = (Math.random() * 2 - 1) * (h - round * 0.45) // kept well behind the skin
-      n.set(0, 0, z >= 0 ? 1 : -1)
-    }
-    pos.set([x, -y, z], i * 3)
-    nrm.set([n.x, n.y, n.z], i * 3)
-  }
-  // centre and scale so the larger side is SIZE
-  const box = new THREE.Box3().setFromArray(pos)
-  const c = box.getCenter(new THREE.Vector3())
-  const s = SIZE / Math.max(box.max.x - box.min.x, box.max.y - box.min.y)
-  for (let i = 0; i < COUNT * 3; i += 3) {
-    pos[i] = (pos[i] - c.x) * s
-    pos[i + 1] = (pos[i + 1] - c.y) * s
-    pos[i + 2] = (pos[i + 2] - c.z) * s
-  }
-  return { pos, nrm }
-}
+import { COUNT, SIDE, SIZE, SURFACE, sample, type Sampled } from './logoShape'
 
 // ---------- simulation (GPGPU: one texel per bead) ----------
 // shared: cursor ray in the logo's space; `fallOff` is 1 on the ray and fades out by uRadius
@@ -302,8 +177,35 @@ const rgba = (xyz: Float32Array) => {
 // cursor ray, logo-space scratch (one logo on screen)
 const local = { o: new THREE.Vector3(), d: new THREE.Vector3(), inv: new THREE.Matrix4(), hit: new THREE.Vector3(), last: new THREE.Vector3(), wind: new THREE.Vector3() }
 
-function buildSim(shapes: string[], gl: THREE.WebGLRenderer) {
-  const targets = shapes.map(sample)
+// Sampling 65k points per logo takes a few hundred ms, so it runs in a worker (main-thread
+// fallback where workers can't draw paths). Cached per shape list.
+const sampled = new Map<string, Promise<Sampled[]>>()
+function sampleLogos(shapes: string[]) {
+  const key = shapes.join('|')
+  let p = sampled.get(key)
+  if (!p) {
+    p = new Promise<Sampled[]>((resolve) => {
+      try {
+        const w = new Worker(new URL('./logoWorker.ts', import.meta.url), { type: 'module' })
+        w.onmessage = (e: MessageEvent<Sampled[]>) => {
+          resolve(e.data)
+          w.terminate()
+        }
+        w.onerror = () => {
+          w.terminate()
+          resolve(shapes.map(sample))
+        }
+        w.postMessage(shapes)
+      } catch {
+        resolve(shapes.map(sample))
+      }
+    })
+    sampled.set(key, p)
+  }
+  return p
+}
+
+function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer) {
   const pos = targets.map((t) => tex(rgba(t.pos)))
   const nrm = targets.map((t) => tex(rgba(t.nrm)))
   // aux: delay, looseness (only the tips shed wisps), core flag, phase
@@ -342,6 +244,8 @@ function buildSim(shapes: string[], gl: THREE.WebGLRenderer) {
   })
   const err = gpu.init()
   if (err) console.error(err)
+  // upload the shape textures now rather than on the first visible frame
+  for (const t of [...pos, ...nrm, aux]) gl.initTexture(t)
 
   const geo = new THREE.BufferGeometry()
   const ref = new Float32Array(COUNT * 2)
@@ -372,38 +276,61 @@ function buildSim(shapes: string[], gl: THREE.WebGLRenderer) {
   return { gpu, posVar, velVar, pos, nrm, aux, geo, beads, halo, from: 0, to: 0, switchedAt: -10, strength: 0, kick: false }
 }
 
+// remember where we came from and kick everything loose towards the new logo
+function switchTo(sim: ReturnType<typeof buildSim>, index: number) {
+  sim.from = sim.to
+  sim.to = index
+  sim.switchedAt = performance.now() / 1000
+  sim.kick = true
+}
+
 function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; hovered: React.RefObject<boolean> }) {
   const group = useRef<THREE.Group>(null)
-  const { camera, raycaster, pointer, gl } = useThree()
+  const { camera, raycaster, pointer, gl, scene, invalidate } = useThree()
   const simRef = useRef<ReturnType<typeof buildSim> | null>(null)
   const beads = useRef<THREE.Points>(null)
   const halo = useRef<THREE.Points>(null)
 
+  const indexRef = useRef(index)
   useEffect(() => {
-    const sim = buildSim(shapes, gl)
-    simRef.current = sim
-    beads.current!.geometry = sim.geo
-    beads.current!.material = sim.beads
-    halo.current!.geometry = sim.geo
-    halo.current!.material = sim.halo
+    indexRef.current = index
+  })
+
+  useEffect(() => {
+    let alive = true
+    let sim: ReturnType<typeof buildSim> | null = null
+    sampleLogos(shapes).then((targets) => {
+      if (!alive) return
+      sim = buildSim(targets, gl)
+      beads.current!.geometry = sim.geo
+      beads.current!.material = sim.beads
+      halo.current!.geometry = sim.geo
+      halo.current!.material = sim.halo
+      // compile the bead shaders now (in parallel where supported), not on the first visible frame
+      void gl.compileAsync(scene, camera).then(() => {
+        if (!alive || !sim) return
+        simRef.current = sim
+        if (indexRef.current !== sim.to) switchTo(sim, indexRef.current)
+        // draw a couple of frames while still off screen, so the first visible one costs nothing extra
+        invalidate(2)
+      })
+    })
     return () => {
+      alive = false
       simRef.current = null
+      if (!sim) return
       sim.gpu.dispose()
       sim.geo.dispose()
       sim.beads.dispose()
       sim.halo.dispose()
       for (const t of [...sim.pos, ...sim.nrm, sim.aux]) t.dispose()
     }
-  }, [shapes, gl])
+  }, [shapes, gl, scene, camera, invalidate])
 
-  // a new logo: remember where we came from, kick everything loose
+  // a new logo (before the sim is ready, the build picks it up)
   useEffect(() => {
     const sim = simRef.current
-    if (!sim || index === sim.to) return
-    sim.from = sim.to
-    sim.to = index
-    sim.switchedAt = performance.now() / 1000
-    sim.kick = true
+    if (sim && index !== sim.to) switchTo(sim, index)
   }, [index])
 
   useFrame((state, rawDt) => {
@@ -488,7 +415,7 @@ export default function ParticleLogo({ shapes, index, active, onPick }: { shapes
   return (
     <Canvas
       dpr={[1, 1.5]}
-      frameloop={active ? 'always' : 'never'}
+      frameloop={active ? 'always' : 'demand'}
       camera={{ position: [0, 0.4, 6.4], fov: 40 }}
       gl={{ antialias: false, alpha: true, preserveDrawingBuffer: import.meta.env.DEV }}
       onPointerMove={() => (hovered.current = true)}

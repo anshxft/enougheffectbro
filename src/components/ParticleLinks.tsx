@@ -23,14 +23,22 @@ export default function ParticleLinks() {
   const [near, setNear] = useState(false)
   const [visible, setVisible] = useState(false)
 
-  // build the 3D only once the block gets close, and stop rendering it while it's off screen
+  // start building the 3D well before the block arrives (a few screens out), but only render it
+  // while it's actually on screen
   useEffect(() => {
-    const io = new IntersectionObserver(([e]) => {
-      setVisible(e.isIntersecting)
-      if (e.isIntersecting) setNear(true)
-    }, { rootMargin: '900px 0px' })
-    io.observe(root.current!)
-    return () => io.disconnect()
+    const el = root.current!
+    const near = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: '300% 0px' })
+    const seen = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: '200px 0px' })
+    near.observe(el)
+    seen.observe(el)
+    // or sooner: once the page has settled, while the visitor is still reading the top
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1))
+    const timer = window.setTimeout(() => idle(() => setNear(true), { timeout: 3000 }), 6000)
+    return () => {
+      near.disconnect()
+      seen.disconnect()
+      window.clearTimeout(timer)
+    }
   }, [])
 
   const go = (d: number) => {
