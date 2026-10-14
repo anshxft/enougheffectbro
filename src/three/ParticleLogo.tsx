@@ -1,18 +1,17 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
 
-// A logo made of a few thousand lit beads (after igloo.inc's social links). Each bead sits on a
-// spring tied to a point sampled from the extruded logo; the cursor's ray pushes beads out of the
-// way and they drift back when it leaves. Switching logos kicks the beads loose and they re-form
-// into the next shape in a staggered wave. The simulation is a small CPU loop; the beads are
-// screen-facing points shaded like spheres, so thousands cost almost nothing to draw.
+// A logo made of ~65k lit beads (after igloo.inc's social links), simulated on the GPU. Each bead
+// is sprung to a point sampled from the inflated logo. The cursor acts like wind: its ray shoves
+// beads aside and its movement drags them along, far and fast; disturbed beads loosen their spring
+// and tumble in turbulence before settling back. A glowing core sits under a closed skin and lights
+// up where the skin is parted. Switching logos kicks the beads loose to re-form in a staggered wave.
 
-const COUNT = 22000
+const SIDE = 256
+const COUNT = SIDE * SIDE
 const SIZE = 3.4 // logo height in world units
-
-// Shapes are "inflated" like igloo's: thick, rounded volumes rather than flat slabs. Each one is
-// sampled into COUNT surface points plus the surface normal there, which lights the beads.
 type Sampled = { pos: Float32Array; nrm: Float32Array }
 
 // Every mark is "inflated" like igloo's: the 2D outline is thickened by `grow`, then puffed into a
@@ -137,36 +136,126 @@ function sample(shape: string): Sampled {
   return { pos, nrm }
 }
 
-const vertexShader = /* glsl */ `
-  attribute float aGlow;
-  attribute float aScale;
-  attribute float aCore;
-  attribute vec3 aNormal;
+// ---------- simulation (GPGPU: one texel per bead) ----------
+// shared: cursor ray in the logo's space; `fallOff` is 1 on the ray and fades out by uRadius
+const CURSOR = /* glsl */ `
+  uniform vec3 uRayO;
+  uniform vec3 uRayD;
+  uniform float uStrength;
+  uniform float uRadius;
+  vec3 offRay(vec3 p) {
+    vec3 w = p - uRayO;
+    return w - uRayD * dot(w, uRayD);
+  }
+  float fallOff(vec3 d) {
+    return uStrength * pow(1.0 - smoothstep(0.0, uRadius, length(d)), 2.0);
+  }
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+`
+
+const velocityShader = /* glsl */ `
+  uniform sampler2D tA;
+  uniform sampler2D tB;
+  uniform sampler2D tAux; // r delay, g looseness, b core, a phase
+  uniform float uTime;
+  uniform float uSince;
+  uniform float uDt;
+  uniform float uKick;
+  uniform vec3 uWind;
+  ${CURSOR}
+  void main() {
+    vec2 uv = gl_FragCoord.xy / resolution.xy;
+    vec4 p = texture2D(texturePosition, uv);
+    vec4 v = texture2D(textureVelocity, uv);
+    vec4 aux = texture2D(tAux, uv);
+    float core = aux.b;
+    float ph = aux.a;
+
+    // staggered re-form after a switch; always alive: a quick shimmer, loose beads wisp further
+    float k = clamp((uSince - aux.r * 0.6) / 0.25, 0.0, 1.0);
+    vec3 target = mix(texture2D(tA, uv).xyz, texture2D(tB, uv).xyz, k);
+    float amp = 0.012 + aux.g;
+    target += vec3(sin(uTime * 2.1 + ph), cos(uTime * 1.7 + ph * 1.3), sin(uTime * 1.9 + ph * 0.7)) * amp;
+    target.y += sin(uTime * 0.5 + ph) * aux.g * 0.5;
+
+    float excite = v.w;
+    float free = uSince < 1.2 ? 1.0 - k : 0.0;
+    // disturbed beads hang loose for a moment, so a light touch sends them far
+    float spring = 24.0 * (1.0 - free * 0.85) / (1.0 + excite * 3.0);
+    vec3 f = (target - p.xyz) * spring;
+
+    vec3 d = offRay(p.xyz);
+    float fall = fallOff(d);
+    float give = core > 0.5 ? 0.12 : 1.0; // the core barely yields, so parting the skin reveals it
+    float dl = max(length(d), 1e-4);
+    f += (d / dl) * fall * 70.0 * give; // shove away from the ray
+    f += uWind * fall * 38.0 * give;    // dragged along with the cursor's movement
+    // tumbling turbulence while excited
+    vec3 q = p.xyz * 2.3 + uTime * 0.9;
+    f += vec3(sin(q.y + ph), sin(q.z + ph * 1.7), sin(q.x + ph * 2.3)) * excite * 2.2;
+
+    excite = max(excite * exp(-uDt * 1.8), clamp(fall * (0.35 + length(uWind) * 0.25), 0.0, 1.0) * give);
+    v.xyz = (v.xyz + f * uDt) * exp(-uDt * mix(5.0, 2.2, excite));
+    if (uKick > 0.5) v.xyz += (vec3(hash(uv + uTime), hash(uv * 1.7 + uTime), hash(uv * 2.3 - uTime)) - 0.5) * 3.0;
+    gl_FragColor = vec4(v.xyz, excite);
+  }
+`
+
+const positionShader = /* glsl */ `
+  uniform float uDt;
+  ${CURSOR}
+  void main() {
+    vec2 uv = gl_FragCoord.xy / resolution.xy;
+    vec4 p = texture2D(texturePosition, uv);
+    vec4 v = texture2D(textureVelocity, uv);
+    p.xyz += v.xyz * uDt;
+    // glow: on near the cursor or while flying, quick to light, slow to fade
+    float want = min(1.0, max(fallOff(offRay(p.xyz)) * 1.4, length(v.xyz) * 0.18));
+    p.w += (want - p.w) * min(1.0, uDt * (want > p.w ? 12.0 : 1.6));
+    gl_FragColor = p;
+  }
+`
+
+// ---------- drawing ----------
+const beadVertex = /* glsl */ `
+  uniform sampler2D tPos;
+  uniform sampler2D tNA;
+  uniform sampler2D tNB;
+  uniform sampler2D tAux;
   uniform float uSize;
+  uniform float uSince;
+  uniform float uHalo;
+  attribute vec2 aRef;
+  attribute float aScale;
   varying float vGlow;
-  varying float vDepth;
   varying float vLight;
   varying float vCore;
+  varying float vDepth;
   void main() {
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vec4 p = texture2D(tPos, aRef);
+    vec4 aux = texture2D(tAux, aRef);
+    float k = clamp((uSince - aux.r * 0.6) / 0.25, 0.0, 1.0);
+    vec3 nrm = k > 0.5 ? texture2D(tNB, aRef).xyz : texture2D(tNA, aRef).xyz;
+    vec4 mv = modelViewMatrix * vec4(p.xyz, 1.0);
+    gl_Position = projectionMatrix * mv;
     // light the bead by the surface it sits on: key light from above-left, soft fill, dark undersides
-    vec3 n = normalize(normalMatrix * aNormal);
+    vec3 n = normalize(normalMatrix * nrm);
     float key = max(dot(n, normalize(vec3(-0.35, 0.8, 0.45))), 0.0);
     float fill = max(dot(n, normalize(vec3(0.6, -0.2, 0.75))), 0.0);
     vLight = key * 0.85 + fill * 0.25 + 0.06;
-    gl_Position = projectionMatrix * mv;
-    // skin beads are big enough to overlap into a closed surface; core beads are smaller
-    gl_PointSize = uSize * aScale * mix(1.3, 0.7, aCore) / -mv.z;
-    vCore = aCore;
-    vGlow = aGlow;
+    vGlow = p.w;
+    vCore = aux.b;
     vDepth = -mv.z;
+    // skin beads overlap into a closed surface, core beads are smaller; the halo pass only draws glowing ones
+    float size = uSize * aScale * mix(1.3, 0.75, aux.b) * (1.0 + p.w * 0.3) / -mv.z;
+    gl_PointSize = uHalo > 0.5 ? (p.w < 0.05 ? 0.0 : size * 5.0) : size;
   }
 `
-const fragmentShader = /* glsl */ `
+const beadFragment = /* glsl */ `
   varying float vGlow;
-  varying float vDepth;
   varying float vLight;
   varying float vCore;
+  varying float vDepth;
   void main() {
     vec2 c = gl_PointCoord * 2.0 - 1.0;
     c.y = -c.y;
@@ -174,69 +263,136 @@ const fragmentShader = /* glsl */ `
     if (r2 > 1.0) discard;
     vec3 n = vec3(c, sqrt(1.0 - r2));
     float diff = max(dot(n, normalize(vec3(-0.45, 0.6, 0.65))), 0.0);
-    float rim = pow(1.0 - n.z, 2.0);
-    // resting beads are a cool slate grey, so the touched (lit) ones read as white
-    // linear values (shown ~2x brighter): surface light sets the tone, the bead's own sphere adds grain
+    // linear values (shown ~2x brighter): slate grey lit by the surface, each bead's sphere adds grain
     vec3 col = mix(vec3(0.012, 0.014, 0.018), vec3(0.34, 0.36, 0.4), vLight * (0.55 + diff * 0.6));
-    col += rim * 0.08;
-    // touched beads light up from inside: cool white, a touch overexposed
-    col = mix(col, vec3(1.0, 1.02, 1.06) * (0.9 + diff * 0.5), vGlow * 0.85);
-    // the core wears the skin's tone (so gaps in the skin don't show) and glows bright white once the
-    // cursor reaches it
-    col = mix(col, vec3(0.95, 0.98, 1.05) * (0.9 + n.z * 0.8), vCore * vGlow);
-    // farther beads sink into the dark a little
+    col += pow(1.0 - n.z, 2.0) * 0.08;
+    // glowing beads burn cool white from inside, the core brightest
+    vec3 hot = vec3(0.92, 0.97, 1.05) * (0.9 + n.z * 0.8) * mix(1.0, 1.6, vCore);
+    col = mix(col, hot, vGlow * mix(0.8, 1.0, vCore));
     col *= mix(1.0, 0.55, smoothstep(5.0, 9.0, vDepth));
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>
   }
 `
+// soft additive light around glowing beads: reads as light leaking out from inside the mark
+const haloFragment = /* glsl */ `
+  varying float vGlow;
+  varying float vCore;
+  void main() {
+    vec2 c = gl_PointCoord * 2.0 - 1.0;
+    float a = exp(-dot(c, c) * 4.0) * vGlow * mix(0.025, 0.05, vCore);
+    // additive with SrcAlpha: colour is weighted by a, and alpha stays tiny so the canvas keeps its transparency
+    gl_FragColor = vec4(vec3(0.75, 0.86, 1.0), a);
+  }
+`
 
-// cursor ray in the logo's space (scratch, one logo on screen)
-const local = { o: new THREE.Vector3(), d: new THREE.Vector3(), inv: new THREE.Matrix4() }
+const tex = (data: Float32Array) => {
+  const t = new THREE.DataTexture(data, SIDE, SIDE, THREE.RGBAFormat, THREE.FloatType)
+  t.needsUpdate = true
+  return t
+}
+const rgba = (xyz: Float32Array) => {
+  const out = new Float32Array(COUNT * 4)
+  for (let i = 0; i < COUNT; i++) out.set([xyz[i * 3], xyz[i * 3 + 1], xyz[i * 3 + 2], 0], i * 4)
+  return out
+}
 
-function createSim(first: Sampled) {
-  const start = first.pos
-  const pos = new Float32Array(start)
-  const nrm = new Float32Array(first.nrm)
-  const vel = new Float32Array(COUNT * 3)
-  const glow = new Float32Array(COUNT)
-  const delay = new Float32Array(COUNT).map(() => Math.random())
-  const phase = new Float32Array(COUNT).map(() => Math.random() * 6.283)
-  // most beads hold their place; a few are loose and drift off like smoke, more so at the tips
-  // only the tips shed a few wisps
-  const loose = new Float32Array(COUNT).map((_, i) => Math.random() ** 24 * Math.max(0, Math.hypot(start[i * 3], start[i * 3 + 1]) / SIZE - 0.35) * 1.4)
-  const sinPh = phase.map(Math.sin)
-  const cosPh = phase.map(Math.cos)
-  const scale = new Float32Array(COUNT).map(() => 0.75 + Math.random() * 0.5)
-  const core = new Float32Array(COUNT).map((_, i) => (i < COUNT * SURFACE ? 0 : 1))
+// cursor ray, logo-space scratch (one logo on screen)
+const local = { o: new THREE.Vector3(), d: new THREE.Vector3(), inv: new THREE.Matrix4(), hit: new THREE.Vector3(), last: new THREE.Vector3(), wind: new THREE.Vector3() }
+
+function buildSim(shapes: string[], gl: THREE.WebGLRenderer) {
+  const targets = shapes.map(sample)
+  const pos = targets.map((t) => tex(rgba(t.pos)))
+  const nrm = targets.map((t) => tex(rgba(t.nrm)))
+  // aux: delay, looseness (only the tips shed wisps), core flag, phase
+  const auxData = new Float32Array(COUNT * 4)
+  const first = targets[0].pos
+  for (let i = 0; i < COUNT; i++) {
+    const tip = Math.max(0, Math.hypot(first[i * 3], first[i * 3 + 1]) / SIZE - 0.35)
+    auxData.set([Math.random(), Math.random() ** 24 * tip * 1.4, i < COUNT * SURFACE ? 0 : 1, Math.random() * 6.283], i * 4)
+  }
+  const aux = tex(auxData)
+
+  const gpu = new GPUComputationRenderer(SIDE, SIDE, gl)
+  const p0 = gpu.createTexture()
+  ;(p0.image.data as Float32Array).set(rgba(targets[0].pos))
+  const v0 = gpu.createTexture()
+  const posVar = gpu.addVariable('texturePosition', positionShader, p0)
+  const velVar = gpu.addVariable('textureVelocity', velocityShader, v0)
+  gpu.setVariableDependencies(posVar, [posVar, velVar])
+  gpu.setVariableDependencies(velVar, [posVar, velVar])
+  const cursor = () => ({
+    uRayO: { value: new THREE.Vector3() },
+    uRayD: { value: new THREE.Vector3(0, 0, -1) },
+    uStrength: { value: 0 },
+    uRadius: { value: 0.9 },
+    uDt: { value: 0 },
+  })
+  Object.assign(posVar.material.uniforms, cursor())
+  Object.assign(velVar.material.uniforms, cursor(), {
+    tA: { value: pos[0] },
+    tB: { value: pos[0] },
+    tAux: { value: aux },
+    uTime: { value: 0 },
+    uSince: { value: 10 },
+    uKick: { value: 0 },
+    uWind: { value: new THREE.Vector3() },
+  })
+  const err = gpu.init()
+  if (err) console.error(err)
+
   const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage))
-  geo.setAttribute('aGlow', new THREE.BufferAttribute(glow, 1).setUsage(THREE.DynamicDrawUsage))
-  geo.setAttribute('aScale', new THREE.BufferAttribute(scale, 1))
-  geo.setAttribute('aCore', new THREE.BufferAttribute(core, 1))
-  geo.setAttribute('aNormal', new THREE.BufferAttribute(nrm, 3).setUsage(THREE.DynamicDrawUsage))
-  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), SIZE * 1.5)
-  const mat = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms: { uSize: { value: 0 } } })
-  return { pos, nrm, core, vel, glow, delay, sinPh, cosPh, loose, geo, mat, from: 0, to: 0, switchedAt: -10, strength: 0 }
+  const ref = new Float32Array(COUNT * 2)
+  for (let i = 0; i < COUNT; i++) ref.set([((i % SIDE) + 0.5) / SIDE, (Math.floor(i / SIDE) + 0.5) / SIDE], i * 2)
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(COUNT * 3), 3))
+  geo.setAttribute('aRef', new THREE.BufferAttribute(ref, 2))
+  geo.setAttribute('aScale', new THREE.BufferAttribute(new Float32Array(COUNT).map(() => 0.75 + Math.random() * 0.5), 1))
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), SIZE * 2)
+  const uniforms = {
+    tPos: { value: null as THREE.Texture | null },
+    tNA: { value: nrm[0] },
+    tNB: { value: nrm[0] },
+    tAux: { value: aux },
+    uSize: { value: 0 },
+    uSince: { value: 10 },
+    uHalo: { value: 0 },
+  }
+  const beads = new THREE.ShaderMaterial({ vertexShader: beadVertex, fragmentShader: beadFragment, uniforms })
+  // the halo shares the same uniform objects, only uHalo differs
+  const halo = new THREE.ShaderMaterial({
+    vertexShader: beadVertex,
+    fragmentShader: haloFragment,
+    uniforms: { ...uniforms, uHalo: { value: 1 } },
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+  })
+  return { gpu, posVar, velVar, pos, nrm, aux, geo, beads, halo, from: 0, to: 0, switchedAt: -10, strength: 0, kick: false }
 }
 
 function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; hovered: React.RefObject<boolean> }) {
-  const points = useRef<THREE.Points>(null)
+  const group = useRef<THREE.Group>(null)
   const { camera, raycaster, pointer, gl } = useThree()
-  const targets = useMemo(() => shapes.map(sample), [shapes])
+  const simRef = useRef<ReturnType<typeof buildSim> | null>(null)
+  const beads = useRef<THREE.Points>(null)
+  const halo = useRef<THREE.Points>(null)
 
-  // simulation state and the material live in a ref, built once the canvas is up
-  const simRef = useRef<ReturnType<typeof createSim> | null>(null)
-  useLayoutEffect(() => {
-    const sim = createSim(targets[0])
+  useEffect(() => {
+    const sim = buildSim(shapes, gl)
     simRef.current = sim
-    points.current!.geometry = sim.geo
-    points.current!.material = sim.mat
+    beads.current!.geometry = sim.geo
+    beads.current!.material = sim.beads
+    halo.current!.geometry = sim.geo
+    halo.current!.material = sim.halo
     return () => {
+      simRef.current = null
+      sim.gpu.dispose()
       sim.geo.dispose()
-      sim.mat.dispose()
+      sim.beads.dispose()
+      sim.halo.dispose()
+      for (const t of [...sim.pos, ...sim.nrm, sim.aux]) t.dispose()
     }
-  }, [targets])
+  }, [shapes, gl])
 
   // a new logo: remember where we came from, kick everything loose
   useEffect(() => {
@@ -245,105 +401,63 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     sim.from = sim.to
     sim.to = index
     sim.switchedAt = performance.now() / 1000
-    for (let i = 0; i < COUNT * 3; i++) sim.vel[i] += (Math.random() - 0.5) * 3
+    sim.kick = true
   }, [index])
-
 
   useFrame((state, rawDt) => {
     const sim = simRef.current
     if (!sim) return
-    const mat = sim.mat
     const dt = Math.min(rawDt, 1 / 30)
     const t = state.clock.elapsedTime
-    const p = points.current!
+    const g = group.current!
     // keeps turning round, lingering face-on (front and back) and sweeping past the edge-on views
     const turn = t * 0.45
-    p.rotation.y = turn - 0.45 * Math.sin(2 * turn) + pointer.x * 0.3
-    p.rotation.x = -0.1 + Math.sin(t * 0.27) * 0.1 - pointer.y * 0.12
-    p.updateMatrixWorld()
-    mat.uniforms.uSize.value = 0.05 * gl.domElement.height
+    g.rotation.y = turn - 0.45 * Math.sin(2 * turn) + pointer.x * 0.3
+    g.rotation.x = -0.1 + Math.sin(t * 0.27) * 0.1 - pointer.y * 0.12
+    g.updateMatrixWorld()
 
-    // cursor ray in the logo's own space
+    // cursor ray in the logo's own space, and how fast its crossing point moves (the wind)
     raycaster.setFromCamera(pointer, camera)
-    local.inv.copy(p.matrixWorld).invert()
+    local.inv.copy(g.matrixWorld).invert()
     local.o.copy(raycaster.ray.origin).applyMatrix4(local.inv)
     local.d.copy(raycaster.ray.direction).transformDirection(local.inv)
+    local.hit.copy(local.o).addScaledVector(local.d, -local.o.z / (local.d.z || 1e-4))
+    local.wind.subVectors(local.hit, local.last).divideScalar(Math.max(dt, 1e-3)).clampLength(0, 12)
+    local.last.copy(local.hit)
     sim.strength += ((hovered.current ? 1 : 0) - sim.strength) * Math.min(1, dt * 6)
 
-    const { pos, vel, glow, delay, sinPh, cosPh, loose, core } = sim
-    // sin(t·w + phase) per bead without calling sin in the loop: precompute sin/cos(t·w) once
-    const s1 = Math.sin(t * 0.9), c1 = Math.cos(t * 0.9)
-    const s2 = Math.sin(t * 0.7), c2 = Math.cos(t * 0.7)
-    const s3 = Math.sin(t * 0.5), c3 = Math.cos(t * 0.5)
     const since = performance.now() / 1000 - sim.switchedAt
-    const a = targets[sim.from].pos
-    const b = targets[sim.to].pos
-    const bn = targets[sim.to].nrm
-    const morphing = since < 1.2
-    const R = 0.55
-    const damp = Math.exp(-dt * 5.5)
-    for (let i = 0; i < COUNT; i++) {
-      const j = i * 3
-      // staggered re-form: each bead switches target after its own delay, drifting loose in between
-      const k = Math.min(1, Math.max(0, (since - delay[i] * 0.6) / 0.25))
-      if (morphing && k > 0.5) {
-        sim.nrm[j] = bn[j]
-        sim.nrm[j + 1] = bn[j + 1]
-        sim.nrm[j + 2] = bn[j + 2]
-      }
-      let tx = a[j] + (b[j] - a[j]) * k
-      let ty = a[j + 1] + (b[j + 1] - a[j + 1]) * k
-      let tz = a[j + 2] + (b[j + 2] - a[j + 2]) * k
-      // always alive: every bead drifts a little in a slow flow field, the loose ones a lot
-      const sp0 = sinPh[i]
-      const cp0 = cosPh[i]
-      const amp = 0.02 + loose[i]
-      tx += (s1 * cp0 + c1 * sp0) * amp
-      ty += (c2 * cp0 - s2 * sp0) * amp + (s3 * cp0 + c3 * sp0) * loose[i] * 0.5
-      tz += (s2 * sp0 - c1 * cp0) * amp
-      const free = since < 1.2 ? 1 - k : 0
-      const spring = 22 * (1 - free * 0.85)
-      let fx = (tx - pos[j]) * spring
-      let fy = (ty - pos[j + 1]) * spring
-      let fz = (tz - pos[j + 2]) * spring
-      // push away from the cursor ray; beads near it light up
-      let lit = 0
-      if (sim.strength > 0.01) {
-        const wx = pos[j] - local.o.x
-        const wy = pos[j + 1] - local.o.y
-        const wz = pos[j + 2] - local.o.z
-        const along = wx * local.d.x + wy * local.d.y + wz * local.d.z
-        const dx = wx - local.d.x * along
-        const dy = wy - local.d.y * along
-        const dz = wz - local.d.z * along
-        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
-        if (dist < 0.75) lit = (1 - dist / 0.75) ** 2 * sim.strength
-        if (dist < R && dist > 1e-4) {
-          // the skin parts around the cursor; the core barely moves, so it shows through, glowing
-          const push = (1 - dist / R) ** 2 * 170 * sim.strength * (core[i] ? 0.03 : 1)
-          fx += (dx / dist) * push + local.d.y * push * 0.3
-          fy += (dy / dist) * push - local.d.x * push * 0.3
-          fz += (dz / dist) * push
-        }
-      }
-      vel[j] = (vel[j] + fx * dt) * damp
-      vel[j + 1] = (vel[j + 1] + fy * dt) * damp
-      vel[j + 2] = (vel[j + 2] + fz * dt) * damp
-      pos[j] += vel[j] * dt
-      pos[j + 1] += vel[j + 1] * dt
-      pos[j + 2] += vel[j + 2] * dt
-      // moving beads catch the light
-      const sp = Math.abs(vel[j]) + Math.abs(vel[j + 1]) + Math.abs(vel[j + 2])
-      const want = Math.max(lit, Math.min(1, sp * 0.12))
-      // light comes on fast and fades slowly, leaving a soft trail
-      glow[i] += (want - glow[i]) * Math.min(1, dt * (want > glow[i] ? 10 : 2.5))
+    for (const v of [sim.posVar, sim.velVar]) {
+      const u = v.material.uniforms
+      u.uRayO.value.copy(local.o)
+      u.uRayD.value.copy(local.d)
+      u.uStrength.value = sim.strength
+      u.uDt.value = dt
     }
-    sim.geo.attributes.position.needsUpdate = true
-    sim.geo.attributes.aGlow.needsUpdate = true
-    if (morphing) sim.geo.attributes.aNormal.needsUpdate = true
+    const vu = sim.velVar.material.uniforms
+    vu.tA.value = sim.pos[sim.from]
+    vu.tB.value = sim.pos[sim.to]
+    vu.uTime.value = t
+    vu.uSince.value = since
+    vu.uKick.value = sim.kick ? 1 : 0
+    vu.uWind.value.copy(local.wind).multiplyScalar(hovered.current ? 1 : 0)
+    sim.kick = false
+    sim.gpu.compute()
+
+    const ru = sim.beads.uniforms
+    ru.tPos.value = sim.gpu.getCurrentRenderTarget(sim.posVar).texture
+    ru.tNA.value = sim.nrm[sim.from]
+    ru.tNB.value = sim.nrm[sim.to]
+    ru.uSince.value = since
+    ru.uSize.value = 0.032 * gl.domElement.height
   })
 
-  return <points ref={points} position={[0, 0.18, 0]} />
+  return (
+    <group ref={group} position={[0, 0.18, 0]}>
+      <points ref={beads} />
+      <points ref={halo} renderOrder={1} />
+    </group>
+  )
 }
 
 // faint concentric rings under the logo, like a display plinth
