@@ -1,8 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
-import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 
 // A logo made of a few thousand lit beads (after igloo.inc's social links). Each bead sits on a
 // spring tied to a point sampled from the extruded logo; the cursor's ray pushes beads out of the
@@ -17,63 +15,119 @@ const SIZE = 3.4 // logo height in world units
 // sampled into COUNT surface points plus the surface normal there, which lights the beads.
 type Sampled = { pos: Float32Array; nrm: Float32Array }
 
-// `thin` marks (the X with its fine double stroke) keep a shallow bevel so their gaps stay open
-const extrusion = (thin: boolean) =>
-  thin
-    ? { depth: 3.2, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.35, bevelSegments: 3, curveSegments: 12 }
-    : { depth: 2.4, bevelEnabled: true, bevelThickness: 1.3, bevelSize: 0.45, bevelSegments: 5, curveSegments: 12 }
+// Every mark is "inflated" like igloo's: the 2D outline is thickened by `grow`, then puffed into a
+// pillow whose half-thickness rises in a quarter circle of radius `round` from the edge inwards,
+// so strokes become round tubes from every side. Built on a distance field of the outline.
+const GRID = 192
+const SPAN = 30 // grid covers -3..27 of the 24-unit icon box
+const CELL = SPAN / GRID
+const SURFACE = 0.55 // share of beads on the skin; the rest fill the inside
 
-const SURFACE = 0.5 // share of beads on the skin; the rest fill the inside so the mark is solid all through
+// chamfer distance (in icon units) from each cell to the nearest cell where `hit` is true
+function distanceTo(hit: (i: number) => boolean) {
+  const d = new Float32Array(GRID * GRID).map((_, i) => (hit(i) ? 0 : 1e9))
+  const D = Math.SQRT2
+  const relax = (i: number, j: number, c: number) => {
+    if (d[j] + c < d[i]) d[i] = d[j] + c
+  }
+  for (let y = 0; y < GRID; y++)
+    for (let x = 0; x < GRID; x++) {
+      const i = y * GRID + x
+      if (x > 0) relax(i, i - 1, 1)
+      if (y > 0) {
+        relax(i, i - GRID, 1)
+        if (x > 0) relax(i, i - GRID - 1, D)
+        if (x < GRID - 1) relax(i, i - GRID + 1, D)
+      }
+    }
+  for (let y = GRID - 1; y >= 0; y--)
+    for (let x = GRID - 1; x >= 0; x--) {
+      const i = y * GRID + x
+      if (x < GRID - 1) relax(i, i + 1, 1)
+      if (y < GRID - 1) {
+        relax(i, i + GRID, 1)
+        if (x < GRID - 1) relax(i, i + GRID + 1, D)
+        if (x > 0) relax(i, i + GRID - 1, D)
+      }
+    }
+  return d.map((v) => v * CELL)
+}
 
-// shape is an SVG path in a 24×24 box; a leading "thin:" marks a fine-stroked logo
+// shape is an SVG path in a 24×24 box; a leading "thin:" marks a fine-stroked logo that needs more growth
 function sample(shape: string): Sampled {
   const thin = shape.startsWith('thin:')
-  const d = thin ? shape.slice(5) : shape
-  const opts = extrusion(thin)
-  const data = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="${d}"/></svg>`)
-  let geo: THREE.BufferGeometry = new THREE.ExtrudeGeometry(data.paths.flatMap((p) => SVGLoader.createShapes(p)), opts)
-  geo.scale(1, -1, 1) // SVG y points down
-  geo = geo.index ? geo.toNonIndexed() : geo
-  geo.computeVertexNormals()
-  geo.computeBoundingBox()
-  const box = geo.boundingBox!
-  const c = box.getCenter(new THREE.Vector3())
-  const s = SIZE / Math.max(box.max.x - box.min.x, box.max.y - box.min.y)
-  geo.translate(-c.x, -c.y, -c.z)
-  geo.scale(s, s, s)
-  const sampler = new MeshSurfaceSampler(new THREE.Mesh(geo)).build()
-
-  // the inside: random points in the path's 2D outline (the canvas tests containment) at any depth
+  const path = new Path2D(thin ? shape.slice(5) : shape)
+  const grow = thin ? 1.0 : 0.35
+  const round = thin ? 2.1 : 1.8
   const ctx = document.createElement('canvas').getContext('2d')!
-  const outline = new Path2D(d)
-  const z0 = -opts.bevelThickness * 0.6
-  const z1 = opts.depth + opts.bevelThickness * 0.6
+  const inside = new Uint8Array(GRID * GRID)
+  for (let y = 0; y < GRID; y++)
+    for (let x = 0; x < GRID; x++) inside[y * GRID + x] = ctx.isPointInPath(path, -3 + (x + 0.5) * CELL, -3 + (y + 0.5) * CELL) ? 1 : 0
+  const toOut = distanceTo((i) => !inside[i])
+  const toIn = distanceTo((i) => !!inside[i])
+  // half-thickness of the pillow at each cell (0 outside the grown outline)
+  const half = new Float32Array(GRID * GRID).map((_, i) => {
+    const e = (inside[i] ? toOut[i] : -toIn[i]) + grow
+    if (e <= 0) return 0
+    const k = Math.min(e, round)
+    return Math.sqrt(round * round - (round - k) ** 2)
+  })
+  const at = (x: number, y: number) => {
+    const fx = Math.min(GRID - 1.001, Math.max(0, (x + 3) / CELL - 0.5))
+    const fy = Math.min(GRID - 1.001, Math.max(0, (y + 3) / CELL - 0.5))
+    const ix = Math.floor(fx)
+    const iy = Math.floor(fy)
+    const tx = fx - ix
+    const ty = fy - iy
+    const i = iy * GRID + ix
+    const top = half[i] + (half[i + 1] - half[i]) * tx
+    const bot = half[i + GRID] + (half[i + GRID + 1] - half[i + GRID]) * tx
+    return top + (bot - top) * ty
+  }
 
   const pos = new Float32Array(COUNT * 3)
   const nrm = new Float32Array(COUNT * 3)
-  const v = new THREE.Vector3()
   const n = new THREE.Vector3()
   for (let i = 0; i < COUNT; i++) {
-    if (Math.random() < SURFACE) {
-      sampler.sample(v, n)
-      // a little jitter off the surface so it reads as a heap of beads, not a skin
-      v.addScaledVector(n, (Math.random() - 0.3) * 0.05)
-    } else {
-      let x = 0
-      let y = 0
-      do {
-        x = Math.random() * 24
-        y = Math.random() * 24
-      } while (!ctx.isPointInPath(outline, x, y))
-      const z = z0 + Math.random() * (z1 - z0)
-      v.set((x - c.x) * s, (-y - c.y) * s, (z - c.z) * s)
-      // light inner beads as if facing the nearer front/back face
-      n.set(0, 0, z > (z0 + z1) / 2 ? 1 : -1)
+    const skin = Math.random() < SURFACE
+    let x = 0
+    let y = 0
+    let h = 0
+    let gx = 0
+    let gy = 0
+    for (;;) {
+      x = -3 + Math.random() * SPAN
+      y = -3 + Math.random() * SPAN
+      h = at(x, y)
+      if (h <= 0.02) continue
+      if (!skin) break
+      // skin beads: accept in proportion to the surface's slope so steep sides aren't sparse
+      gx = (at(x + CELL, y) - at(x - CELL, y)) / (2 * CELL)
+      gy = (at(x, y + CELL) - at(x, y - CELL)) / (2 * CELL)
+      if (Math.random() * 5 < Math.min(5, Math.sqrt(1 + gx * gx + gy * gy))) break
     }
-    pos.set([v.x, v.y, v.z], i * 3)
+    const side = Math.random() < 0.5 ? -1 : 1
+    let z: number
+    if (skin) {
+      z = side * h
+      // icon y points down; the normal's y flips with it
+      n.set(-gx, gy, side).normalize()
+    } else {
+      z = (Math.random() * 2 - 1) * h
+      n.set(0, 0, z >= 0 ? 1 : -1)
+    }
+    pos.set([x, -y, z], i * 3)
     nrm.set([n.x, n.y, n.z], i * 3)
   }
-  geo.dispose()
+  // centre and scale so the larger side is SIZE
+  const box = new THREE.Box3().setFromArray(pos)
+  const c = box.getCenter(new THREE.Vector3())
+  const s = SIZE / Math.max(box.max.x - box.min.x, box.max.y - box.min.y)
+  for (let i = 0; i < COUNT * 3; i += 3) {
+    pos[i] = (pos[i] - c.x) * s
+    pos[i + 1] = (pos[i + 1] - c.y) * s
+    pos[i + 2] = (pos[i + 2] - c.z) * s
+  }
   return { pos, nrm }
 }
 
