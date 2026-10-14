@@ -181,15 +181,15 @@ const velocityShader = /* glsl */ `
     float excite = v.w;
     float free = uSince < 1.2 ? 1.0 - k : 0.0;
     // disturbed beads hang loose for a moment, so a light touch sends them far
-    float spring = 24.0 * (1.0 - free * 0.85) / (1.0 + excite * 3.0);
+    float spring = 24.0 * (1.0 - free * 0.85) / (1.0 + excite * 2.0);
     vec3 f = (target - p.xyz) * spring;
 
     vec3 d = offRay(p.xyz);
     float fall = fallOff(d);
     float give = core > 0.5 ? 0.12 : 1.0; // the core barely yields, so parting the skin reveals it
     float dl = max(length(d), 1e-4);
-    f += (d / dl) * fall * 70.0 * give; // shove away from the ray
-    f += uWind * fall * 38.0 * give;    // dragged along with the cursor's movement
+    f += (d / dl) * fall * 52.0 * give; // shove away from the ray
+    f += uWind * fall * 24.0 * give;    // dragged along with the cursor's movement
     // tumbling turbulence while excited
     vec3 q = p.xyz * 2.3 + uTime * 0.9;
     f += vec3(sin(q.y + ph), sin(q.z + ph * 1.7), sin(q.x + ph * 2.3)) * excite * 2.2;
