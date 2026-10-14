@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { siGithub } from 'simple-icons'
+import { siGithub, siX } from 'simple-icons'
 import { site } from '../content'
 import { blip, whoosh } from '../lib/sound'
 
@@ -10,7 +10,7 @@ const ENVELOPE = 'M2 4h20v16H2z M3.8 7.6v10.6h16.4V7.6L12 13.4z M4.6 5.8L12 11.1
 
 const LINKS = [
   { label: 'GitHub', href: site.socials.find((s) => s.label === 'GitHub')!.href, path: siGithub.path },
-  { label: 'X / Twitter', href: site.socials.find((s) => s.label === 'X')!.href, path: 'x' }, // a chunky 3D X, see src/three/ParticleLogo.tsx
+  { label: 'X / Twitter', href: site.socials.find((s) => s.label === 'X')!.href, path: `thin:${siX.path}` },
   { label: 'Email', href: `mailto:${site.email}`, path: ENVELOPE },
 ]
 const SHAPES = LINKS.map((l) => l.path)

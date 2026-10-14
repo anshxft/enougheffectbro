@@ -3,8 +3,6 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 // A logo made of a few thousand lit beads (after igloo.inc's social links). Each bead sits on a
 // spring tied to a point sampled from the extruded logo; the cursor's ray pushes beads out of the
@@ -12,30 +10,31 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 // into the next shape in a staggered wave. The simulation is a small CPU loop; the beads are
 // screen-facing points shaded like spheres, so thousands cost almost nothing to draw.
 
-const COUNT = 20000
-const SIZE = 3 // logo height in world units
+const COUNT = 26000
+const SIZE = 3.4 // logo height in world units
 
 // Shapes are "inflated" like igloo's: thick, rounded volumes rather than flat slabs. Each one is
 // sampled into COUNT surface points plus the surface normal there, which lights the beads.
 type Sampled = { pos: Float32Array; nrm: Float32Array }
 
-// the X is two crossed rounded beams (the brand mark's thin double stroke reads badly as beads)
-function chunkyX() {
-  const beam = (a: number) => new RoundedBoxGeometry(0.62, 3.5, 0.62, 5, 0.3).rotateZ(a)
-  return mergeGeometries([beam(0.66), beam(-0.66).translate(0, 0, 0.02)])
-}
-
-function svgSolid(d: string) {
+// `thin` marks (the X with its fine double stroke) keep a shallow bevel so their gaps stay open
+function svgSolid(d: string, thin: boolean) {
   const data = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="${d}"/></svg>`)
   const shapes = data.paths.flatMap((p) => SVGLoader.createShapes(p))
-  const geo = new THREE.ExtrudeGeometry(shapes, { depth: 2.4, bevelEnabled: true, bevelThickness: 1.3, bevelSize: 0.45, bevelSegments: 5, curveSegments: 12 })
+  const geo = new THREE.ExtrudeGeometry(
+    shapes,
+    thin
+      ? { depth: 3.2, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.35, bevelSegments: 3, curveSegments: 12 }
+      : { depth: 2.4, bevelEnabled: true, bevelThickness: 1.3, bevelSize: 0.45, bevelSegments: 5, curveSegments: 12 },
+  )
   geo.scale(1, -1, 1) // SVG y points down
   return geo
 }
 
-// shape is an SVG path in a 24×24 box, or "x" for the chunky X
+// shape is an SVG path in a 24×24 box; a leading "thin:" marks a fine-stroked logo
 function sample(shape: string): Sampled {
-  let geo = shape === 'x' ? chunkyX() : svgSolid(shape)
+  const thin = shape.startsWith('thin:')
+  let geo: THREE.BufferGeometry = svgSolid(thin ? shape.slice(5) : shape, thin)
   geo = geo.index ? geo.toNonIndexed() : geo
   geo.computeVertexNormals()
   geo.computeBoundingBox()
@@ -174,7 +173,7 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     p.rotation.y = turn - 0.45 * Math.sin(2 * turn) + pointer.x * 0.3
     p.rotation.x = -0.1 + Math.sin(t * 0.27) * 0.1 - pointer.y * 0.12
     p.updateMatrixWorld()
-    mat.uniforms.uSize.value = 0.04 * gl.domElement.height
+    mat.uniforms.uSize.value = 0.05 * gl.domElement.height
 
     // cursor ray in the logo's own space
     raycaster.setFromCamera(pointer, camera)
@@ -255,7 +254,7 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     if (morphing) sim.geo.attributes.aNormal.needsUpdate = true
   })
 
-  return <points ref={points} />
+  return <points ref={points} position={[0, 0.18, 0]} />
 }
 
 // faint concentric rings under the logo, like a display plinth
