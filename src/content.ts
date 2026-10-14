@@ -41,6 +41,21 @@ export const site = {
     { value: 6, label: 'Years coding' },
     { value: 2, label: 'Products on Arc' },
   ],
+  // the About section's "after hours" side, revealed under the cursor lens
+  night: {
+    lead: 'After dark I read the charts and',
+    highlight: 'ship before sunrise.',
+    stats: [
+      { value: 3, label: 'AM, usual bedtime' },
+      { value: 12, label: 'Age of my first bug' },
+      { value: 24, label: 'Hours the market never sleeps' },
+    ],
+    about:
+      "When the studio lights go off: candles on one screen, a terminal on the other, and one more deploy before bed. Six years of 3 a.m. bugs and I still enjoy hunting them down.",
+    skills: ['Charts', 'Late deploys', 'Debugging', 'Side quests'],
+    hint: 'Move your cursor over the page to see the night shift',
+    hintTouch: 'Tap anywhere to see the night shift',
+  },
 }
 
 export type Work = {
