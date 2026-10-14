@@ -8,7 +8,7 @@ import * as THREE from 'three'
 // into the next shape in a staggered wave. The simulation is a small CPU loop; the beads are
 // screen-facing points shaded like spheres, so thousands cost almost nothing to draw.
 
-const COUNT = 26000
+const COUNT = 22000
 const SIZE = 3.4 // logo height in world units
 
 // Shapes are "inflated" like igloo's: thick, rounded volumes rather than flat slabs. Each one is
@@ -21,7 +21,9 @@ type Sampled = { pos: Float32Array; nrm: Float32Array }
 const GRID = 192
 const SPAN = 30 // grid covers -3..27 of the 24-unit icon box
 const CELL = SPAN / GRID
-const SURFACE = 0.55 // share of beads on the skin; the rest fill the inside
+// the first SURFACE share of beads (by index, the same in every shape) form a closed skin; the rest
+// are a glowing core that only shows where the cursor parts the skin
+const SURFACE = 0.7
 
 // chamfer distance (in icon units) from each cell to the nearest cell where `hit` is true
 function distanceTo(hit: (i: number) => boolean) {
@@ -89,7 +91,7 @@ function sample(shape: string): Sampled {
   const nrm = new Float32Array(COUNT * 3)
   const n = new THREE.Vector3()
   for (let i = 0; i < COUNT; i++) {
-    const skin = Math.random() < SURFACE
+    const skin = i < COUNT * SURFACE
     let x = 0
     let y = 0
     let h = 0
@@ -100,7 +102,11 @@ function sample(shape: string): Sampled {
       y = -3 + Math.random() * SPAN
       h = at(x, y)
       if (h <= 0.02) continue
-      if (!skin) break
+      // the core stays well inside: only where the pillow is thick
+      if (!skin) {
+        if (h > round * 0.55) break
+        continue
+      }
       // skin beads: accept in proportion to the surface's slope so steep sides aren't sparse
       gx = (at(x + CELL, y) - at(x - CELL, y)) / (2 * CELL)
       gy = (at(x, y + CELL) - at(x, y - CELL)) / (2 * CELL)
@@ -113,7 +119,7 @@ function sample(shape: string): Sampled {
       // icon y points down; the normal's y flips with it
       n.set(-gx, gy, side).normalize()
     } else {
-      z = (Math.random() * 2 - 1) * h
+      z = (Math.random() * 2 - 1) * (h - round * 0.45) // kept well behind the skin
       n.set(0, 0, z >= 0 ? 1 : -1)
     }
     pos.set([x, -y, z], i * 3)
@@ -134,11 +140,13 @@ function sample(shape: string): Sampled {
 const vertexShader = /* glsl */ `
   attribute float aGlow;
   attribute float aScale;
+  attribute float aCore;
   attribute vec3 aNormal;
   uniform float uSize;
   varying float vGlow;
   varying float vDepth;
   varying float vLight;
+  varying float vCore;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     // light the bead by the surface it sits on: key light from above-left, soft fill, dark undersides
@@ -147,7 +155,9 @@ const vertexShader = /* glsl */ `
     float fill = max(dot(n, normalize(vec3(0.6, -0.2, 0.75))), 0.0);
     vLight = key * 0.85 + fill * 0.25 + 0.06;
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = uSize * aScale / -mv.z;
+    // skin beads are big enough to overlap into a closed surface; core beads are smaller
+    gl_PointSize = uSize * aScale * mix(1.3, 0.7, aCore) / -mv.z;
+    vCore = aCore;
     vGlow = aGlow;
     vDepth = -mv.z;
   }
@@ -156,6 +166,7 @@ const fragmentShader = /* glsl */ `
   varying float vGlow;
   varying float vDepth;
   varying float vLight;
+  varying float vCore;
   void main() {
     vec2 c = gl_PointCoord * 2.0 - 1.0;
     c.y = -c.y;
@@ -166,10 +177,13 @@ const fragmentShader = /* glsl */ `
     float rim = pow(1.0 - n.z, 2.0);
     // resting beads are a cool slate grey, so the touched (lit) ones read as white
     // linear values (shown ~2x brighter): surface light sets the tone, the bead's own sphere adds grain
-    vec3 col = mix(vec3(0.012, 0.014, 0.018), vec3(0.42, 0.45, 0.5), vLight * (0.55 + diff * 0.6));
+    vec3 col = mix(vec3(0.012, 0.014, 0.018), vec3(0.34, 0.36, 0.4), vLight * (0.55 + diff * 0.6));
     col += rim * 0.08;
     // touched beads light up from inside: cool white, a touch overexposed
     col = mix(col, vec3(1.0, 1.02, 1.06) * (0.9 + diff * 0.5), vGlow * 0.85);
+    // the core wears the skin's tone (so gaps in the skin don't show) and glows bright white once the
+    // cursor reaches it
+    col = mix(col, vec3(0.95, 0.98, 1.05) * (0.9 + n.z * 0.8), vCore * vGlow);
     // farther beads sink into the dark a little
     col *= mix(1.0, 0.55, smoothstep(5.0, 9.0, vDepth));
     gl_FragColor = vec4(col, 1.0);
@@ -193,15 +207,17 @@ function createSim(first: Sampled) {
   const loose = new Float32Array(COUNT).map((_, i) => Math.random() ** 24 * Math.max(0, Math.hypot(start[i * 3], start[i * 3 + 1]) / SIZE - 0.35) * 1.4)
   const sinPh = phase.map(Math.sin)
   const cosPh = phase.map(Math.cos)
-  const scale = new Float32Array(COUNT).map(() => 0.55 + Math.random() * 0.7)
+  const scale = new Float32Array(COUNT).map(() => 0.75 + Math.random() * 0.5)
+  const core = new Float32Array(COUNT).map((_, i) => (i < COUNT * SURFACE ? 0 : 1))
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage))
   geo.setAttribute('aGlow', new THREE.BufferAttribute(glow, 1).setUsage(THREE.DynamicDrawUsage))
   geo.setAttribute('aScale', new THREE.BufferAttribute(scale, 1))
+  geo.setAttribute('aCore', new THREE.BufferAttribute(core, 1))
   geo.setAttribute('aNormal', new THREE.BufferAttribute(nrm, 3).setUsage(THREE.DynamicDrawUsage))
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), SIZE * 1.5)
   const mat = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms: { uSize: { value: 0 } } })
-  return { pos, nrm, vel, glow, delay, sinPh, cosPh, loose, geo, mat, from: 0, to: 0, switchedAt: -10, strength: 0 }
+  return { pos, nrm, core, vel, glow, delay, sinPh, cosPh, loose, geo, mat, from: 0, to: 0, switchedAt: -10, strength: 0 }
 }
 
 function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; hovered: React.RefObject<boolean> }) {
@@ -254,7 +270,7 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     local.d.copy(raycaster.ray.direction).transformDirection(local.inv)
     sim.strength += ((hovered.current ? 1 : 0) - sim.strength) * Math.min(1, dt * 6)
 
-    const { pos, vel, glow, delay, sinPh, cosPh, loose } = sim
+    const { pos, vel, glow, delay, sinPh, cosPh, loose, core } = sim
     // sin(t·w + phase) per bead without calling sin in the loop: precompute sin/cos(t·w) once
     const s1 = Math.sin(t * 0.9), c1 = Math.cos(t * 0.9)
     const s2 = Math.sin(t * 0.7), c2 = Math.cos(t * 0.7)
@@ -303,7 +319,8 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
         const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
         if (dist < 0.75) lit = (1 - dist / 0.75) ** 2 * sim.strength
         if (dist < R && dist > 1e-4) {
-          const push = (1 - dist / R) ** 2 * 170 * sim.strength
+          // the skin parts around the cursor; the core barely moves, so it shows through, glowing
+          const push = (1 - dist / R) ** 2 * 170 * sim.strength * (core[i] ? 0.03 : 1)
           fx += (dx / dist) * push + local.d.y * push * 0.3
           fy += (dy / dist) * push - local.d.x * push * 0.3
           fz += (dz / dist) * push
