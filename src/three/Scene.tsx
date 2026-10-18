@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { PerformanceMonitor, Text, useFBO } from '@react-three/drei'
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing'
@@ -150,7 +150,68 @@ function BackText() {
   )
 }
 
-// Fires once the scene has actually drawn a few frames, i.e. shaders are compiled and the first-frame hitch is over.
+// The post-processing composer, so Warmup can reach the materials of its passes.
+const composer: { current: { passes: unknown[] } | null } = { current: null }
+
+// every THREE.Material reachable from an object (the composer's passes and their nested passes)
+function materialsIn(root: unknown) {
+  const out = new Set<THREE.Material>()
+  const seen = new Set<unknown>()
+  const walk = (v: unknown, depth: number) => {
+    if (!v || typeof v !== 'object' || seen.has(v) || depth > 5) return
+    seen.add(v)
+    if (v instanceof THREE.Material) return void out.add(v)
+    if (v instanceof THREE.Object3D || v instanceof THREE.Texture || ArrayBuffer.isView(v)) return
+    for (const k of Object.keys(v)) walk((v as Record<string, unknown>)[k], depth + 1)
+  }
+  walk(root, 0)
+  return [...out]
+}
+
+// Compiles every shader before the first frame is drawn, in parallel on the GPU driver where supported
+// (KHR_parallel_shader_compile), so the main thread and the loader's animation keep running. That covers
+// hidden objects (works ring, story), which would otherwise stall the page the first time they appear,
+// and the post-processing passes. Each is compiled for the screen and for a render target, since the
+// composer draws the scene into one and three keys programs by output colour space. Rendering starts
+// once it's done.
+function Warmup({ onDone }: { onDone: () => void }) {
+  const { gl, scene, camera } = useThree()
+  useEffect(() => {
+    let alive = true
+    const hidden: THREE.Object3D[] = []
+    scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o)
+        o.visible = true
+      }
+    })
+    const passes = new THREE.Scene()
+    const quad = new THREE.PlaneGeometry(1, 1)
+    for (const m of materialsIn(composer.current?.passes)) passes.add(new THREE.Mesh(quad, m))
+    const target = new THREE.WebGLRenderTarget(4, 4)
+    const prev = gl.getRenderTarget()
+    const jobs: Promise<unknown>[] = []
+    for (const t of [null, target]) {
+      gl.setRenderTarget(t)
+      jobs.push(gl.compileAsync(scene, camera), gl.compileAsync(passes, camera))
+    }
+    gl.setRenderTarget(prev)
+    for (const o of hidden) o.visible = false // compileAsync has already collected what it needs
+    Promise.all(jobs)
+      .catch(() => {})
+      .then(() => {
+        target.dispose()
+        quad.dispose()
+        if (alive) onDone()
+      })
+    return () => {
+      alive = false
+    }
+  }, [gl, scene, camera, onDone])
+  return null
+}
+
+// Fires once the scene has actually drawn a few frames, i.e. the first-frame hitch is over.
 function ReadySignal({ onReady, frames = 12 }: { onReady?: () => void; frames?: number }) {
   const n = useRef(0)
   useFrame(() => {
@@ -167,7 +228,7 @@ const fxFlags = flags.get('fx') ?? 'bcnv'
 function Effects() {
   const lens = useMemo(() => new LensGlitchEffect(ACCENT, flags.has('glitch') ? Number(flags.get('glitch')) : undefined), [])
   return (
-    <EffectComposer multisampling={0} frameBufferType={THREE.UnsignedByteType}>
+    <EffectComposer ref={composer as never} multisampling={0} frameBufferType={THREE.UnsignedByteType}>
       <>{fxFlags.includes('b') && <Bloom mipmapBlur levels={5} resolutionScale={0.5} intensity={0.55} radius={0.6} luminanceThreshold={0.8} luminanceSmoothing={0.15} />}</>
       <>{fxFlags.includes('c') && <primitive object={lens} />}</>
       <>{fxFlags.includes('n') && <Noise premultiply opacity={0.15} blendFunction={BlendFunction.ADD} />}</>
@@ -183,11 +244,14 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
   const maxDpr = Number(flags.get('dpr')) || Math.min(window.devicePixelRatio, mobile ? 1.25 : 1.5)
   const [low, setLow] = useState(mobile)
   const [dpr, setDpr] = useState(maxDpr)
+  const [warm, setWarm] = useState(false)
+  const warmed = useCallback(() => setWarm(true), [])
 
   return (
     <div className="pointer-events-none fixed top-0 left-0 z-0 h-lvh w-full" aria-hidden>
       <Canvas
         dpr={dpr}
+        frameloop={warm ? 'always' : 'never'}
         gl={{ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: import.meta.env.DEV }}
         camera={{ position: [0, 0, 8], fov: 35 }}
         onCreated={(state) => {
@@ -217,6 +281,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
         <Suspense fallback={null}>
           <Works />
         </Suspense>
+        <Warmup onDone={warmed} />
         <ReadySignal onReady={onReady} />
         {fxFlags !== '0' && (
           <Effects />

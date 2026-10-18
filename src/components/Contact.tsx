@@ -63,6 +63,20 @@ function LocalTime() {
   )
 }
 
+// The liquid-chrome A turns its glyph into a height map on the main thread (a few hundred ms), so it
+// only loads once the footer is about a screen away, never during the intro.
+function FooterLogo() {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [near, setNear] = useState(false)
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: '100% 0px' })
+    io.observe(ref.current!)
+    return () => io.disconnect()
+  }, [])
+  const box = <span ref={ref} className="block h-14 w-[72px]" />
+  return near ? <Suspense fallback={box}><LiquidLogo /></Suspense> : box
+}
+
 // Finale: the prism comes back (src/three/Scene.tsx watches #contact), "Let's talk" rises letter by letter.
 export default function Contact() {
   const root = useRef<HTMLElement>(null)
@@ -149,9 +163,7 @@ export default function Contact() {
 
       <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-grid pt-6">
         <div className="flex items-center gap-3">
-          <Suspense fallback={<span className="block h-14 w-[72px]" />}>
-            <LiquidLogo />
-          </Suspense>
+          <FooterLogo />
           <p className="label">© 2026 {site.name}</p>
         </div>
         <p className="label">Built with React, three.js & GSAP · {site.location}</p>
