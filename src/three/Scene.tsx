@@ -4,7 +4,7 @@ import { PerformanceMonitor, Text, useFBO } from '@react-three/drei'
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
-import { fx, hud } from './fx'
+import { fx, hud, SCENE_COVERED } from './fx'
 import { createMobiusGeometry } from './mobius'
 import { LensGlitchEffect } from './LensGlitch'
 import { tint } from './palette'
@@ -245,13 +245,20 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
   const [low, setLow] = useState(mobile)
   const [dpr, setDpr] = useState(maxDpr)
   const [warm, setWarm] = useState(false)
+  // nothing to draw while an opaque section covers the screen
+  const [covered, setCovered] = useState(false)
+  useEffect(() => {
+    const on = (e: Event) => setCovered((e as CustomEvent<boolean>).detail)
+    window.addEventListener(SCENE_COVERED, on)
+    return () => window.removeEventListener(SCENE_COVERED, on)
+  }, [])
   const warmed = useCallback(() => setWarm(true), [])
 
   return (
     <div className="pointer-events-none fixed top-0 left-0 z-0 h-lvh w-full" aria-hidden>
       <Canvas
         dpr={dpr}
-        frameloop={warm ? 'always' : 'never'}
+        frameloop={warm && !covered ? 'always' : 'never'}
         gl={{ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: import.meta.env.DEV }}
         camera={{ position: [0, 0, 8], fov: 35 }}
         onCreated={(state) => {

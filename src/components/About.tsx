@@ -5,6 +5,7 @@ import { SplitText } from 'gsap/SplitText'
 import { useGSAP } from '@gsap/react'
 import { site } from '../content'
 import { tick, whoosh } from '../lib/sound'
+import { setSceneCovered } from '../three/fx'
 
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
 
@@ -18,7 +19,10 @@ type Side = {
   skills: string[]
 }
 const DAY: Side = { lead: site.aboutLead, highlight: site.aboutHighlight, stats: site.aboutStats, about: site.about, skills: site.skills }
-const NIGHT: Side = site.night
+// the x-ray under the lens: the same words in the same places (so it lines up with the page), inverted
+// to night, with the labels swapped for the after-hours notes
+const GRID_TILE = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><path d="M0 .5H48M.5 0V48" stroke="#f2f2f2" stroke-opacity=".08"/></svg>')}`
+const NIGHT: Side = { ...DAY, stats: DAY.stats.map((s, i) => ({ ...s, label: site.night.stats[i] })), skills: site.night.skills }
 
 // A number as odometer wheels: one 0–9 column per digit, rolled into place by the reveal.
 function Odometer({ value }: { value: number }) {
@@ -52,12 +56,12 @@ function Stage({ side, night }: { side: Side; night?: boolean }) {
           night ? '[-webkit-text-stroke:1.5px_rgb(242_242_242/0.12)]' : '[-webkit-text-stroke:1.5px_rgb(5_5_5/0.12)]'
         }`}
       >
-        {night ? 'Night' : 'About'}
+        About
       </p>
 
       <div className={`label relative flex justify-between ${night ? 'text-fg/60!' : 'text-bg/60!'}`}>
-        <p>{night ? '/ After hours' : '/ About'}</p>
-        <p>{night ? `${site.location} · 3:00 am` : `${site.location} · since 2020`}</p>
+        <p>{night ? '/ About · x-ray' : '/ About'}</p>
+        <p>{night ? site.night.corner : `${site.location} · since 2020`}</p>
       </div>
 
       <h2
@@ -118,7 +122,7 @@ function Stage({ side, night }: { side: Side; night?: boolean }) {
 // The one light section. The white stage wipes up over the dark page and pins for ~1.5 screens:
 // the statement fills in word by word with the scroll, then the highlight gets swept into an
 // inverted block; the numbers roll in like odometers. The cursor carries a lens that reveals the
-// "after hours" version of the whole section underneath, inverted to night.
+// x-ray of the section underneath: the same words inverted to night, the labels swapped for notes.
 export default function About() {
   const root = useRef<HTMLElement>(null)
   const stage = useRef<HTMLDivElement>(null)
@@ -180,6 +184,9 @@ export default function About() {
         })
       })
 
+      // while the white stage fills the screen the WebGL scene behind it can't be seen: pause it
+      const cover = ScrollTrigger.create({ trigger: root.current, start: 'top top', end: 'bottom bottom', onToggle: (self) => setSceneCovered(self.isActive) })
+
       // the lens: follows the pointer with a little lag, opens over the stage, closes when it leaves
       const s = stage.current!
       const lens = { x: -999, y: -999, r: 0 }
@@ -188,8 +195,8 @@ export default function About() {
         ring.current!.style.transform = `translate(${lens.x - lens.r}px, ${lens.y - lens.r}px)`
         ring.current!.style.width = ring.current!.style.height = `${lens.r * 2}px`
       }
-      const toX = gsap.quickTo(lens, 'x', { duration: 0.45, ease: 'power3.out', onUpdate: draw })
-      const toY = gsap.quickTo(lens, 'y', { duration: 0.45, ease: 'power3.out', onUpdate: draw })
+      const toX = gsap.quickTo(lens, 'x', { duration: 0.25, ease: 'power3.out', onUpdate: draw })
+      const toY = gsap.quickTo(lens, 'y', { duration: 0.25, ease: 'power3.out', onUpdate: draw })
       const toR = gsap.quickTo(lens, 'r', { duration: 0.6, ease: 'power3.out', onUpdate: draw })
       const size = () => Math.min(s.clientWidth, s.clientHeight) * (window.matchMedia('(pointer: coarse)').matches ? 0.32 : 0.26)
       let inside = false
@@ -219,6 +226,8 @@ export default function About() {
         s.removeEventListener('pointermove', move)
         s.removeEventListener('pointerdown', move)
         s.removeEventListener('pointerleave', leave)
+        cover.kill()
+        setSceneCovered(false)
       }
     },
     { scope: root },
@@ -234,11 +243,12 @@ export default function About() {
         <div
           ref={night}
           className="ab-night pointer-events-none absolute inset-0 flex flex-col justify-between gap-8 bg-bg px-4 py-20 sm:px-8 sm:py-24"
-          style={{ clipPath: 'circle(0px at -999px -999px)' }}
+          // the site's grid behind the x-ray (an image tile: far cheaper to repaint than a gradient grid)
+          style={{ clipPath: 'circle(0px at -999px -999px)', backgroundImage: `url("${GRID_TILE}")`, backgroundSize: '48px 48px' }}
         >
           <Stage side={NIGHT} night />
         </div>
-        <div ref={ring} aria-hidden className="pointer-events-none absolute top-0 left-0 size-0 rounded-full border border-bg/40 shadow-[0_0_0_1px_rgb(242_242_242/0.25)]" />
+        <div ref={ring} aria-hidden className="pointer-events-none absolute top-0 left-0 size-0 rounded-full shadow-[0_0_0_1px_rgb(242_242_242/0.5),0_0_0_2px_rgb(5_5_5/0.25),inset_0_0_28px_rgb(242_242_242/0.14)]" />
         <p className="label pointer-events-none absolute right-4 bottom-5 text-bg/50! sm:right-8">
           <span className="pointer-coarse:hidden">{site.night.hint} ↖</span>
           <span className="hidden pointer-coarse:inline">{site.night.hintTouch}</span>

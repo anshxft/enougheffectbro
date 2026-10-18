@@ -21,6 +21,10 @@ export const introPlayed = () => played
 
 // Hero reveal after the loader: an iris of light opens from the centre while the letters gather in
 // and the A spins into place. Coming back to Home in the same session skips straight to the end.
+// Sections that cover the whole screen with an opaque page (About) pause the WebGL scene behind them.
+export const SCENE_COVERED = 'scene-covered'
+export const setSceneCovered = (covered: boolean) => window.dispatchEvent(new CustomEvent(SCENE_COVERED, { detail: covered }))
+
 export function playIntro(instant = false) {
   const tl = gsap.timeline()
   if (played) return tl // already running or finished (fx keeps its end state)

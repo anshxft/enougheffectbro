@@ -41,20 +41,13 @@ export const site = {
     { value: 6, label: 'Years coding' },
     { value: 2, label: 'Products on Arc' },
   ],
-  // the About section's "after hours" side, revealed under the cursor lens
+  // the About section's x-ray under the cursor lens: same words, these labels instead
   night: {
-    lead: 'After dark I read the charts and',
-    highlight: 'ship before sunrise.',
-    stats: [
-      { value: 3, label: 'AM, usual bedtime' },
-      { value: 12, label: 'Age of my first bug' },
-      { value: 24, label: 'Hours the market never sleeps' },
-    ],
-    about:
-      "When the studio lights go off: candles on one screen, a terminal on the other, and one more deploy before bed. Six years of 3 a.m. bugs and I still enjoy hunting them down.",
-    skills: ['Charts', 'Late deploys', 'Debugging', 'Side quests'],
-    hint: 'Move your cursor over the page to see the night shift',
-    hintTouch: 'Tap anywhere to see the night shift',
+    corner: 'India · 3:00 am',
+    stats: ['3 am, usual bedtime', 'first bug at 12', 'market never sleeps'],
+    skills: ['Charts after dark', 'Ships before sunrise', 'Late deploys', 'Debugging'],
+    hint: 'Move your cursor over the page to x-ray it',
+    hintTouch: 'Tap anywhere to x-ray the page',
   },
 }
 
