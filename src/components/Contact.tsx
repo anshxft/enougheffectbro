@@ -5,7 +5,9 @@ import { SplitText } from 'gsap/SplitText'
 import { useGSAP } from '@gsap/react'
 import { site } from '../content'
 import ParticleLinks from './ParticleLinks'
-import PressureWordmark from './PressureWordmark'
+import { fx } from '../three/fx'
+import { scrollToY } from '../lib/smooth-scroll'
+import { whoosh } from '../lib/sound'
 
 const LiquidLogo = lazy(() => import('./LiquidLogo'))
 
@@ -157,9 +159,28 @@ export default function Contact() {
         <ParticleLinks />
       </div>
 
-      <div className="mt-24">
-        <PressureWordmark text={site.name} />
-      </div>
+      {/* full circle: the hero's glass loop comes back here (the scene places it over this block);
+          clicking spins it and rides the page back up to the start */}
+      <button
+        id="full-circle"
+        type="button"
+        onPointerEnter={() => (fx.loopHover = 1)}
+        onPointerLeave={() => (fx.loopHover = 0)}
+        onClick={() => {
+          fx.loopKick = 14
+          whoosh(0.9)
+          scrollToY(0, 2.4)
+        }}
+        className="group relative mt-16 flex h-[70svh] w-full cursor-pointer items-end justify-center pb-4"
+        aria-label="Back to the start"
+      >
+        <span className="label inline-flex items-center gap-3 text-fg/70! transition-colors group-hover:text-fg!">
+          Back to the start
+          <span aria-hidden className="transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:-translate-y-1">
+            ↑
+          </span>
+        </span>
+      </button>
 
       <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-grid pt-6">
         <div className="flex items-center gap-3">

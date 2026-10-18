@@ -205,7 +205,8 @@ function sampleLogos(shapes: string[]) {
   return p
 }
 
-function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer) {
+// starts already formed as logo `start` (no intro morph: it's built off screen, where it wouldn't animate)
+function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer, start: number) {
   const pos = targets.map((t) => tex(rgba(t.pos)))
   const nrm = targets.map((t) => tex(rgba(t.nrm)))
   // aux: delay, looseness (only the tips shed wisps), core flag, phase
@@ -219,7 +220,7 @@ function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer) {
 
   const gpu = new GPUComputationRenderer(SIDE, SIDE, gl)
   const p0 = gpu.createTexture()
-  ;(p0.image.data as Float32Array).set(rgba(targets[0].pos))
+  ;(p0.image.data as Float32Array).set(rgba(targets[start].pos))
   const v0 = gpu.createTexture()
   const posVar = gpu.addVariable('texturePosition', positionShader, p0)
   const velVar = gpu.addVariable('textureVelocity', velocityShader, v0)
@@ -234,8 +235,8 @@ function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer) {
   })
   Object.assign(posVar.material.uniforms, cursor())
   Object.assign(velVar.material.uniforms, cursor(), {
-    tA: { value: pos[0] },
-    tB: { value: pos[0] },
+    tA: { value: pos[start] },
+    tB: { value: pos[start] },
     tAux: { value: aux },
     uTime: { value: 0 },
     uSince: { value: 10 },
@@ -256,8 +257,8 @@ function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer) {
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), SIZE * 2)
   const uniforms = {
     tPos: { value: null as THREE.Texture | null },
-    tNA: { value: nrm[0] },
-    tNB: { value: nrm[0] },
+    tNA: { value: nrm[start] },
+    tNB: { value: nrm[start] },
     tAux: { value: aux },
     uSize: { value: 0 },
     uSince: { value: 10 },
@@ -273,7 +274,7 @@ function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer) {
     depthWrite: false,
     transparent: true,
   })
-  return { gpu, posVar, velVar, pos, nrm, aux, geo, beads, halo, from: 0, to: 0, switchedAt: -10, strength: 0, kick: false }
+  return { gpu, posVar, velVar, pos, nrm, aux, geo, beads, halo, from: start, to: start, switchedAt: -10, strength: 0, kick: false }
 }
 
 // remember where we came from and kick everything loose towards the new logo
@@ -301,7 +302,7 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     let sim: ReturnType<typeof buildSim> | null = null
     sampleLogos(shapes).then((targets) => {
       if (!alive) return
-      sim = buildSim(targets, gl)
+      sim = buildSim(targets, gl, indexRef.current)
       beads.current!.geometry = sim.geo
       beads.current!.material = sim.beads
       halo.current!.geometry = sim.geo

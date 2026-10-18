@@ -6,6 +6,8 @@ export const fx = {
   glitch: 0, // 0..1 strength of the block/tear/blue glitch post effect
   intro: 0, // 0..1 hero reveal (letters gather in, prism spins into place)
   reveal: 0, // 0..1 iris opening from the centre of the screen
+  loopHover: 0, // 1 while the pointer is over the "back to the start" loop at the end of the page
+  loopKick: 0, // extra spin (rad/s) added on click, decays in the scene
 }
 
 // Live numbers for the hero HUD, written by the scene each frame. Plain numbers so the DOM side

@@ -34,6 +34,8 @@ function Prism({ low }: { low: boolean }) {
   const still = useMemo(() => reducedMotion(), [])
   const scale = Math.min(viewport.width * (mobile ? 0.75 : 0.52), viewport.height * 0.9, 5.2)
   const pop = useRef(0)
+  const spin = useRef(0)
+  const extra = useRef(0)
   const frame = useRef(0)
   // The glass re-renders the scene behind it every frame, so it only runs in the hero and the contact finale.
   const [onStage, setOnStage] = useState(true)
@@ -75,7 +77,11 @@ function Prism({ low }: { low: boolean }) {
     const targetY = (still ? 0 : Math.sin(t * 0.35) * 0.55) + turn + input.pointer.x * 0.35 + (1 - p) * Math.PI * 2
     // resting tilt so the loop reads in 3D (you see its depth and the twist), not as a flat ring
     const targetX = 0.42 - input.pointer.y * 0.3 + Math.sin(t * 0.4) * (still ? 0 : 0.08) + Math.sin(turn / 2) * 0.25
-    m.rotation.y += (targetY - m.rotation.y) * k
+    // the end-of-page loop: spins faster while hovered, and a click kicks it round
+    spin.current += ((fx.loopHover ? 1.6 : 0) + fx.loopKick - spin.current) * (1 - Math.exp(-dt * 3))
+    fx.loopKick *= Math.exp(-dt * 1.5)
+    extra.current += spin.current * dt
+    m.rotation.y += (targetY + extra.current - m.rotation.y) * k
     m.rotation.x += (targetX - m.rotation.x) * k
     m.quaternion.toArray(hud.q)
     hud.yaw = m.rotation.y
@@ -84,6 +90,18 @@ function Prism({ low }: { low: boolean }) {
       const e = 1 - (1 - cp) ** 3
       // up beside the email / buttons, clear of the pressure wordmark below
       m.position.set(mobile ? 0 : viewport.width * 0.35, -viewport.height * 0.9 * (1 - e) + viewport.height * (mobile ? 0.28 : 0.2), 0)
+      // then down into the "back to the start" block at the very end, centred and bigger
+      const end = document.getElementById('full-circle')
+      if (end) {
+        const r = end.getBoundingClientRect()
+        const fp = Math.min(1, Math.max(0, (window.innerHeight - r.top) / (window.innerHeight / 2 + r.height / 2)))
+        const f = fp * fp * (3 - 2 * fp)
+        const cx = (r.left + r.width / 2) / window.innerWidth - 0.5
+        const cy = 0.5 - (r.top + r.height * 0.45) / window.innerHeight
+        m.position.x += (cx * viewport.width - m.position.x) * f
+        m.position.y += (cy * viewport.height - m.position.y) * f
+        m.scale.multiplyScalar(1 + f * (mobile ? 0.5 : 0.75) + fx.loopHover * f * 0.06)
+      }
     } else {
       // centre stage through the interlude; steps back as the first project swings in so the
       // screens pass in front of it; lifts away as About arrives
