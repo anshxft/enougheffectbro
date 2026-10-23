@@ -16,7 +16,7 @@ import {
 
 export const site = {
   name: 'Ansh',
-  tagline: 'Developer, designer & web3 builder. 18, coding since 12.',
+  tagline: 'Developer, designer & web3 builder from India. 18.',
   location: 'India',
   status: 'just chilling',
   // contact line: what I'm probably doing at this hour in India (checked in order, `until` is exclusive)
@@ -31,20 +31,19 @@ export const site = {
     { label: 'X', href: 'https://x.com/imalanxx' },
   ],
   about:
-    "I'm Ansh, an 18-year-old developer and designer from India. I wrote my first line of code at 12 and I've been building ever since. Right now I ship web3 products on Arc, like prediction markets and escrow, where real USDC moves through my contracts. I also trade crypto.",
+    "I'm Ansh, an 18-year-old developer and designer from India. Right now I ship web3 products on Arc, like prediction markets and escrow, where real USDC moves through my contracts. I also trade crypto.",
   skills: ['Dev', 'Design', 'Web3', 'Crypto trading'],
   // big statement in the About section; the highlight closes it in an inverted block
   aboutLead: 'I build on-chain products where',
   aboutHighlight: 'real money moves.',
   aboutStats: [
     { value: 18, label: 'Years old' },
-    { value: 6, label: 'Years coding' },
     { value: 2, label: 'Products on Arc' },
   ],
   // the About section's x-ray under the cursor lens: same words, these labels instead
   night: {
     corner: 'India · 3:00 am',
-    stats: ['3 am, usual bedtime', 'first bug at 12', 'market never sleeps'],
+    stats: ['3 am, usual bedtime', 'market never sleeps'],
     skills: ['Charts after dark', 'Ships before sunrise', 'Late deploys', 'Debugging'],
     hint: 'Move your cursor over the page to x-ray it',
     hintTouch: 'Tap anywhere to x-ray the page',
@@ -138,7 +137,6 @@ export const services = [
 ]
 
 export const experience = [
-  { year: '2020', title: 'First line of code', body: 'Started programming at 12.' },
   { year: '2026', title: 'PredictArc', body: 'Prediction markets live on Arc mainnet.' },
   { year: '2026', title: 'Heldby', body: 'USDC escrow with an AI arbiter on Arc.' },
   { year: 'Now', title: 'Student', body: '18, building and trading.' },
@@ -163,12 +161,3 @@ export const stack: { name: string; group: string; note: string; icon?: { path: 
   { name: 'Vercel', group: 'Ship', note: 'Hosting and serverless functions', icon: siVercel },
   { name: 'GitHub', group: 'Ship', note: 'Code, history, deploys', icon: siGithub },
 ]
-
-// The elsewhere page: a quiet valley you walk through as a little hiker
-export const elsewhere = {
-  intro: 'Step outside.',
-  hint: 'Scroll or hold W to walk · Shift to run · mouse to look around',
-  hintTouch: 'Swipe up to walk',
-  outro: 'Stay as long as you like.',
-  back: 'Back to the studio',
-}

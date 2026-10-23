@@ -3,7 +3,6 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useGSAP } from '@gsap/react'
 import { experience } from '../content'
-import { TLink } from './PageTransition'
 
 gsap.registerPlugin(ScrollTrigger, useGSAP)
 
@@ -32,22 +31,9 @@ export default function Experience() {
   return (
     <section ref={root} id="experience" aria-labelledby="experience-title" className="relative overflow-x-clip px-4 py-32 sm:px-8">
       <p className="label mb-10">/ Experience</p>
-      <div className="mb-20 flex flex-wrap items-end justify-between gap-8">
-        <h2 id="experience-title" className="display text-[clamp(3rem,12vw,10rem)]">
-          Journey
-        </h2>
-        {/* door to the elsewhere page (a quiet place to walk around): a small dawn sun is the only warm colour on the dark site */}
-        <TLink to="/elsewhere" className="group flex min-h-11 items-center gap-4 rounded-full border border-grid bg-bg/90 py-2 pr-6 pl-2 transition-colors hover:border-fg">
-          <span
-            aria-hidden
-            className="size-12 rounded-full bg-[radial-gradient(circle_at_50%_70%,#fff1dc_0_28%,#f4cf93_29%_45%,#d98e62_46%_70%,#3a2e22_71%)] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110 group-hover:rotate-12"
-          />
-          <span>
-            <span className="block text-lg font-medium">Step outside</span>
-            <span className="label">Somewhere quieter →</span>
-          </span>
-        </TLink>
-      </div>
+      <h2 id="experience-title" className="display mb-20 text-[clamp(3rem,12vw,10rem)]">
+        Journey
+      </h2>
       <ol className="ex-list relative ml-1.5 max-w-3xl">
         <span aria-hidden className="absolute top-0 bottom-0 left-0 w-px bg-grid" />
         <span aria-hidden className="ex-progress absolute top-0 bottom-0 left-0 w-px origin-top bg-accent" />

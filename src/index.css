@@ -89,14 +89,6 @@
   to { transform: translateX(-50%); }
 }
 
-/* elsewhere page: the walk is driven by scrolling, a scrollbar would give it away */
-html.no-scrollbar {
-  scrollbar-width: none;
-}
-html.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
 /* set by <Cursor> only while the custom cursor is running */
 html.custom-cursor,
 html.custom-cursor * {

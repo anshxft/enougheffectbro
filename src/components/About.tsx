@@ -62,7 +62,7 @@ function Stage({ side, night }: { side: Side; night?: boolean }) {
 
       <div className={`label relative flex justify-between ${night ? 'text-fg/60!' : 'text-bg/60!'}`}>
         <p>{night ? '/ About · x-ray' : '/ About'}</p>
-        <p>{night ? site.night.corner : `${site.location} · since 2020`}</p>
+        <p>{night ? site.night.corner : `${site.location} · web3 builder`}</p>
       </div>
 
       <h2
@@ -95,7 +95,7 @@ function Stage({ side, night }: { side: Side; night?: boolean }) {
       </h2>
 
       <div className={`relative grid items-end gap-8 lg:grid-cols-2 lg:gap-16 ${ink}`} aria-hidden={night}>
-        <dl className={`grid grid-cols-3 items-start gap-4 border-t pt-5 ${night ? 'border-fg/15' : 'border-bg/15'}`}>
+        <dl className={`grid grid-cols-2 items-start gap-4 border-t pt-5 ${night ? 'border-fg/15' : 'border-bg/15'}`}>
           {side.stats.map((s) => (
             <div key={s.label} className="ab-stat flex flex-col-reverse">
               <dt className={`label mt-2 ${night ? 'text-fg/60!' : 'text-bg/60!'}`}>{s.label}</dt>
