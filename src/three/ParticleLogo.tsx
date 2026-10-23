@@ -64,13 +64,19 @@ const velocityShader = /* glsl */ `
     float give = core > 0.5 ? 0.12 : 1.0; // the core barely yields, so parting the skin reveals it
     float dl = max(length(d), 1e-4);
     f += (d / dl) * fall * 52.0 * give; // shove away from the ray
-    f += uWind * fall * 24.0 * give;    // dragged along with the cursor's movement
+    f += uWind * fall * 16.0 * give;    // dragged along with the cursor's movement
     // tumbling turbulence while excited
     vec3 q = p.xyz * 2.3 + uTime * 0.9;
     f += vec3(sin(q.y + ph), sin(q.z + ph * 1.7), sin(q.x + ph * 2.3)) * excite * 2.2;
 
+    // a soft leash: past ~0.6 units from home the pull back grows fast, so nothing flies off far
+    vec3 home = target - p.xyz;
+    f += home * smoothstep(0.6, 1.4, length(home)) * 90.0;
+
     excite = max(excite * exp(-uDt * 1.8), clamp(fall * (0.35 + length(uWind) * 0.25), 0.0, 1.0) * give);
-    v.xyz = (v.xyz + f * uDt) * exp(-uDt * mix(5.0, 2.2, excite));
+    v.xyz = (v.xyz + f * uDt) * exp(-uDt * mix(5.0, 2.8, excite));
+    float sp = length(v.xyz);
+    if (sp > 7.0) v.xyz *= 7.0 / sp; // speed cap
     if (uKick > 0.5) v.xyz += (vec3(hash(uv + uTime), hash(uv * 1.7 + uTime), hash(uv * 2.3 - uTime)) - 0.5) * 3.0;
     gl_FragColor = vec4(v.xyz, excite);
   }
@@ -352,7 +358,7 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     local.o.copy(raycaster.ray.origin).applyMatrix4(local.inv)
     local.d.copy(raycaster.ray.direction).transformDirection(local.inv)
     local.hit.copy(local.o).addScaledVector(local.d, -local.o.z / (local.d.z || 1e-4))
-    local.wind.subVectors(local.hit, local.last).divideScalar(Math.max(dt, 1e-3)).clampLength(0, 12)
+    local.wind.subVectors(local.hit, local.last).divideScalar(Math.max(dt, 1e-3)).clampLength(0, 7)
     local.last.copy(local.hit)
     sim.strength += ((hovered.current ? 1 : 0) - sim.strength) * Math.min(1, dt * 6)
 
