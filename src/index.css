@@ -6,7 +6,7 @@
   --color-grid: #1a1a1a;
   --color-fg: #f2f2f2;
   --color-muted: #7a7a7a;
-  --color-accent: #2b3bff;
+  --color-accent: #f2f2f2; /* monochrome: the old electric blue is retired */
 
   --font-display: "Archivo Variable", "Archivo", sans-serif;
   --font-sans: "Geist Variable", "Geist", system-ui, sans-serif;

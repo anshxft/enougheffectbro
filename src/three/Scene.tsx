@@ -101,11 +101,15 @@ function Prism({ low }: { low: boolean }) {
         m.position.x += (cx * viewport.width - m.position.x) * f
         m.position.y += (cy * viewport.height - m.position.y) * f
         m.scale.multiplyScalar(1 + f * (mobile ? 0.5 : 0.75) + fx.loopHover * f * 0.06)
+        // phones: no room beside the contact copy, so it only appears for the closing block
+        if (mobile) m.scale.multiplyScalar(Math.max(0.001, f))
       }
     } else {
       // centre stage through the interlude; steps back as the first project swings in so the
       // screens pass in front of it; lifts away as About arrives
       const back = THREE.MathUtils.smoothstep(sp, 0.86, 1)
+      // phones: the screens are narrow, so the loop would show beneath them; it shrinks away instead
+      if (mobile) m.scale.multiplyScalar(Math.max(0.001, 1 - back * (1 - THREE.MathUtils.smoothstep(ap, 0.1, 0.9))))
       const exit = THREE.MathUtils.smoothstep(ap, 0.1, 0.9)
       m.position.x += (0 - m.position.x) * k
       m.position.y += (exit * viewport.height * 0.9 - m.position.y) * k

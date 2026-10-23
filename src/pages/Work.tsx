@@ -45,9 +45,12 @@ function WorkView({ slug }: { slug?: string }) {
           onSplit: (self) => gsap.from(self.chars, { yPercent: 110, duration: 0.9, ease: 'power3.out', stagger: 0.03, delay: 0.35 }),
         })
         gsap.from('.wk-meta', { y: 20, autoAlpha: 0, duration: 0.7, stagger: 0.08, delay: 0.7 })
+        // phones: a gentler reveal that finishes sooner, so shots aren't left cropped on a short screen
+        const phone = window.innerWidth < 640
+        const inset = phone ? '5%' : '12%'
         gsap.utils.toArray<HTMLElement>('.wk-shot').forEach((el) => {
-          gsap.fromTo(el, { clipPath: 'inset(12% 12% 12% 12% round 16px)' }, { clipPath: 'inset(0% 0% 0% 0% round 16px)', ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: 'top 35%', scrub: true } })
-          gsap.fromTo(el.firstElementChild, { scale: 1.15 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom top', scrub: true } })
+          gsap.fromTo(el, { clipPath: `inset(${inset} ${inset} ${inset} ${inset} round 16px)` }, { clipPath: 'inset(0% 0% 0% 0% round 16px)', ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: phone ? 'top 60%' : 'top 35%', scrub: true } })
+          gsap.fromTo(el.firstElementChild, { scale: phone ? 1.05 : 1.15 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: phone ? 'top 40%' : 'bottom top', scrub: true } })
         })
         gsap.utils.toArray<HTMLElement>('.wk-up').forEach((el) =>
           gsap.from(el, { y: 40, autoAlpha: 0, duration: 0.8, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 85%' } }),
@@ -76,7 +79,7 @@ function WorkView({ slug }: { slug?: string }) {
         </p>
         <h1 className="wk-title display mt-4 text-[clamp(2rem,8.5vw,10rem)]">{work.title}</h1>
         <div className="mt-8 flex flex-wrap items-center gap-6">
-          <a href={work.url} target="_blank" rel="noreferrer" className="wk-meta label rounded-full bg-accent px-5 py-3 text-fg! transition-colors hover:bg-fg hover:text-bg!">
+          <a href={work.url} target="_blank" rel="noreferrer" className="wk-meta label rounded-full bg-fg px-5 py-3 text-bg! transition-colors hover:bg-fg/80">
             Visit {work.urlLabel} ↗
           </a>
           <ul className="wk-meta flex flex-wrap gap-2">
@@ -152,7 +155,7 @@ function WorkView({ slug }: { slug?: string }) {
 
         <TLink to={`/work/${next.slug}`} className="group mt-32 block border-t border-grid bg-bg pt-10">
           <p className="label">Next work →</p>
-          <p className="display mt-4 text-[clamp(2rem,8.5vw,10rem)] transition-colors group-hover:text-accent">{next.title}</p>
+          <p className="display mt-4 text-[clamp(2rem,8.5vw,10rem)] transition-opacity group-hover:opacity-70">{next.title}</p>
         </TLink>
       </main>
     </>

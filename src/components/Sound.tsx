@@ -71,13 +71,13 @@ export function SoundPrompt() {
     setAsk(false)
   }
   return (
-    <div role="dialog" aria-label="Sound" className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[90] flex flex-wrap items-center justify-between gap-3 rounded-full border border-grid bg-bg py-2 pr-2 pl-5 sm:inset-x-auto sm:right-8 sm:bottom-8">
+    <div role="dialog" aria-label="Sound" className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[90] flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-grid bg-bg p-3 pl-4 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-5 sm:inset-x-auto sm:right-8 sm:bottom-8">
       <p className="label text-fg!">This site has sound. Turn it on?</p>
       <div className="flex gap-2">
-        <button type="button" onClick={() => choose(true)} className="label rounded-full bg-accent px-4 py-2 text-fg!">
+        <button type="button" onClick={() => choose(true)} className="label inline-flex min-h-11 items-center rounded-full bg-fg px-4 text-bg! sm:min-h-0 sm:py-2">
           Sound on
         </button>
-        <button type="button" onClick={() => choose(false)} className="label rounded-full border border-grid px-4 py-2 text-fg!">
+        <button type="button" onClick={() => choose(false)} className="label inline-flex min-h-11 items-center rounded-full border border-grid px-4 text-fg! sm:min-h-0 sm:py-2">
           No thanks
         </button>
       </div>

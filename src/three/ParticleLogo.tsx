@@ -382,7 +382,13 @@ function Beads({ shapes, index, hovered }: { shapes: string[]; index: number; ho
     ru.tNA.value = sim.nrm[sim.from]
     ru.tNB.value = sim.nrm[sim.to]
     ru.uSince.value = since
-    ru.uSize.value = 0.032 * gl.domElement.height
+    // fit the mark to narrow (portrait) stages by pulling the camera back; beads keep their screen size
+    const fit = Math.max(6.4, (SIZE * 1.35) / (2 * Math.tan((20 * Math.PI) / 180)) / (state.size.width / state.size.height))
+    if (Math.abs(state.camera.position.z - fit) > 0.01) {
+      state.camera.position.z = fit
+      state.camera.updateMatrixWorld()
+    }
+    ru.uSize.value = 0.032 * gl.domElement.height * (fit / 6.4)
   })
 
   return (

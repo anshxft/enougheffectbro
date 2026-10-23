@@ -143,11 +143,11 @@ export default function Contact() {
           </a>
         </h2>
         <div className="mt-10 flex flex-wrap items-center gap-4">
-          <a href={`mailto:${site.email}`} className="ct-in mr-2 font-mono text-sm text-fg/70 transition-colors hover:text-fg sm:text-base">
+          <a href={`mailto:${site.email}`} className="ct-in mr-2 inline-flex min-h-11 items-center font-mono text-sm text-fg/70 transition-colors hover:text-fg sm:text-base">
             {site.email}
           </a>
           <Magnetic>
-            <button type="button" onClick={copy} className="ct-in label inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-fg! transition-colors hover:bg-fg hover:text-bg!" aria-live="polite">
+            <button type="button" onClick={copy} className="ct-in label inline-flex min-h-11 items-center rounded-full bg-fg px-6 text-bg! transition-colors hover:bg-fg/80" aria-live="polite">
               {copied ? 'Copied ✓' : 'Copy email'}
             </button>
           </Magnetic>

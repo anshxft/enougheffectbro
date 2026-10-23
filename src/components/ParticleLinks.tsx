@@ -65,7 +65,7 @@ export default function ParticleLinks() {
         if (e.key === 'ArrowLeft') go(-1)
         if (e.key === 'Enter' && e.target === e.currentTarget) open()
       }}
-      className="relative h-[min(78svh,760px)] outline-none"
+      className="relative h-[min(64svh,560px)] outline-none sm:h-[min(78svh,760px)]"
     >
       {/* a pool of darkness behind the mark so the busy room doesn't fight the beads, and a soft
           backlight in it so the dark obsidian mark stands out as a silhouette */}

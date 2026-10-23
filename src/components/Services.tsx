@@ -50,7 +50,7 @@ export default function Services() {
               aria-hidden
               className="absolute inset-0 origin-left scale-x-0 bg-fg transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-x-100"
             />
-            <div className="relative grid items-center gap-4 bg-bg/80 py-8 transition-colors duration-300 group-hover:bg-transparent group-hover:text-bg sm:grid-cols-[4rem_1fr_minmax(0,26rem)_3rem] sm:gap-8 sm:px-6 sm:py-10">
+            <div className="relative grid items-center gap-4 bg-bg/80 px-5 py-8 transition-colors duration-300 group-hover:bg-transparent group-hover:text-bg sm:grid-cols-[4rem_1fr_minmax(0,26rem)_3rem] sm:gap-8 sm:px-6 sm:py-10">
               <p className="sv-in label text-current! opacity-60">{String(i + 1).padStart(2, '0')}</p>
               <h3
                 className="sv-in display text-[clamp(3rem,9vw,8rem)] text-transparent transition-colors duration-300 [-webkit-text-stroke:1.5px_rgb(242_242_242/0.8)] group-hover:text-bg group-hover:[-webkit-text-stroke:1.5px_transparent] max-sm:text-fg max-sm:[-webkit-text-stroke:0]"

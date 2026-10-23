@@ -6,7 +6,7 @@ import { experience } from '../content'
 
 gsap.registerPlugin(ScrollTrigger, useGSAP)
 
-// Timeline: an accent line draws down with scroll; each entry slides in as it reaches it.
+// Timeline: a white line draws down with scroll; each entry slides in as it reaches it.
 export default function Experience() {
   const root = useRef<HTMLElement>(null)
 
@@ -40,8 +40,8 @@ export default function Experience() {
         {experience.map((e) => (
           <li key={e.title} className="ex-item relative grid gap-2 py-10 pl-10 sm:grid-cols-[10rem_1fr] sm:gap-8">
             <span aria-hidden className="ex-dot absolute top-12 -left-[5px] size-[11px] rounded-full bg-accent ring-4 ring-bg" />
-            <p className="ex-in display text-4xl text-fg/90">{e.year}</p>
-            <div className="ex-in">
+            <p className="ex-in display self-start text-4xl text-fg/90">{e.year}</p>
+            <div className="ex-in -mx-3 rounded-lg bg-bg/75 px-3 py-2">
               <h3 className="text-2xl font-medium">{e.title}</h3>
               <p className="mt-1 text-fg/60">{e.body}</p>
             </div>
