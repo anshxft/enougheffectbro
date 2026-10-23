@@ -132,9 +132,9 @@ export const works: Work[] = [
 ]
 
 export const services = [
-  { title: 'Dev', body: 'Full-stack web apps and the smart contracts behind them, tested.' },
-  { title: 'Design', body: 'Interfaces and brand for the products I build.' },
-  { title: 'Web3', body: 'On-chain products on Arc: prediction markets, escrow, USDC payments.' },
+  { title: 'Dev', body: 'Full-stack web apps and the smart contracts behind them, tested.', tags: ['React', 'TypeScript', 'Solidity', 'Foundry'] },
+  { title: 'Design', body: 'Interfaces and brand for the products I build.', tags: ['Interfaces', 'Brand', 'Motion', '3D'] },
+  { title: 'Web3', body: 'On-chain products on Arc: prediction markets, escrow, USDC payments.', tags: ['Arc', 'USDC', 'Escrow', 'Markets'] },
 ]
 
 export const experience = [
