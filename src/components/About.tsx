@@ -6,6 +6,7 @@ import { useGSAP } from '@gsap/react'
 import { site } from '../content'
 import { tick, whoosh } from '../lib/sound'
 import { setSceneCovered } from '../three/fx'
+import Scribble from './Scribble'
 
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
 
@@ -236,19 +237,28 @@ export default function About() {
   return (
     <section ref={root} id="about" aria-labelledby="about-title" className="relative h-[250vh]">
       <div ref={stage} className="ab-stage sticky top-0 h-dvh overflow-hidden bg-fg">
+        {/* the alter ego, faint scribbles spread behind the page */}
+        <Scribble mode="day" />
         <div className="ab-day absolute inset-0 flex flex-col justify-between gap-8 px-4 py-20 sm:px-8 sm:py-24">
           <Stage side={DAY} />
         </div>
         {/* the night shift, only visible inside the lens */}
         <div
           ref={night}
-          className="ab-night pointer-events-none absolute inset-0 flex flex-col justify-between gap-8 bg-bg px-4 py-20 sm:px-8 sm:py-24"
-          // the site's grid behind the x-ray (an image tile: far cheaper to repaint than a gradient grid)
-          style={{ clipPath: 'circle(0px at -999px -999px)', backgroundImage: `url("${GRID_TILE}")`, backgroundSize: '48px 48px' }}
+          className="ab-night pointer-events-none absolute inset-0 flex flex-col justify-between gap-8 px-4 py-20 sm:px-8 sm:py-24"
+          // deep violet with the site's grid (an image tile: far cheaper to repaint than a gradient grid)
+          style={{
+            clipPath: 'circle(0px at -999px -999px)',
+            backgroundColor: '#140a26',
+            backgroundImage: `url("${GRID_TILE}")`,
+            backgroundSize: '48px 48px',
+          }}
         >
+          {/* the same scribbles, glowing white: the alter ego shows through the lens */}
+          <Scribble mode="night" />
           <Stage side={NIGHT} night />
         </div>
-        <div ref={ring} aria-hidden className="pointer-events-none absolute top-0 left-0 size-0 rounded-full shadow-[0_0_0_1px_rgb(242_242_242/0.5),0_0_0_2px_rgb(5_5_5/0.25),inset_0_0_28px_rgb(242_242_242/0.14)]" />
+        <div ref={ring} aria-hidden className="pointer-events-none absolute top-0 left-0 size-0 rounded-full shadow-[0_0_0_1px_rgb(242_242_242/0.5),0_0_0_2px_rgb(5_5_5/0.25),inset_0_0_28px_rgb(190_150_255/0.22)]" />
         <p className="label pointer-events-none absolute right-4 bottom-5 text-bg/50! sm:right-8">
           <span className="pointer-coarse:hidden">{site.night.hint} ↖</span>
           <span className="hidden pointer-coarse:inline">{site.night.hintTouch}</span>
