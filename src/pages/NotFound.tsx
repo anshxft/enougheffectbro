@@ -6,12 +6,14 @@ import Header from '../components/Header'
 import { TLink } from '../components/PageTransition'
 import PressureWordmark from '../components/PressureWordmark'
 import { works } from '../content'
+import { usePageMeta } from '../lib/page-meta'
 
 gsap.registerPlugin(ScrambleTextPlugin, useGSAP)
 
 // Lost visitors: a pressure-reactive 404, the line decodes in, and real ways back.
 export default function NotFound() {
   const root = useRef<HTMLElement>(null)
+  usePageMeta('Page not found — Ansh')
 
   useGSAP(
     () => {

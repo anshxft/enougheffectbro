@@ -1,4 +1,5 @@
 import { StrictMode } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import '@fontsource-variable/archivo/wdth.css'
@@ -26,6 +27,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="*" element={<NotFound />} />
         </Routes>
         <SoundPrompt />
+        {/* cookieless page-view counts (Vercel Web Analytics) */}
+        <Analytics />
         <Cursor />
       </PageTransitionProvider>
     </BrowserRouter>

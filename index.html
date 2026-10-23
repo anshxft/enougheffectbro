@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#050505" />
     <title>Ansh — Developer, designer & web3 builder</title>
@@ -14,14 +17,42 @@
     <meta property="og:image" content="https://enougheffectbro.vercel.app/og.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="ANSH in glowing letters behind a glass A, inside a dark grid dome" />
+    <meta property="og:image:alt" content="ANSH in glowing letters behind a glass Möbius loop, inside a dark dotted dome" />
     <link rel="canonical" href="https://enougheffectbro.vercel.app/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:creator" content="@imalanxx" />
     <meta name="twitter:image" content="https://enougheffectbro.vercel.app/og.jpg" />
+    <!-- who this site is about, for search engines -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Ansh",
+        "url": "https://enougheffectbro.vercel.app/",
+        "image": "https://enougheffectbro.vercel.app/og.jpg",
+        "jobTitle": "Developer, designer & web3 builder",
+        "description": "18-year-old developer and designer from India building web3 products on Arc.",
+        "address": { "@type": "PostalAddress", "addressCountry": "IN" },
+        "email": "mailto:alanleader6267@gmail.com",
+        "sameAs": ["https://github.com/anshxft", "https://x.com/imalanxx"],
+        "knowsAbout": ["Web development", "UI design", "Web3", "Smart contracts", "Arc", "USDC"]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main style="font-family: system-ui, sans-serif; background: #050505; color: #f2f2f2; min-height: 100vh; padding: 48px 24px; line-height: 1.6">
+        <h1 style="font-size: 48px; margin: 0 0 8px">Ansh</h1>
+        <p>Developer, designer &amp; web3 builder from India.</p>
+        <h2 style="margin-top: 32px">Work</h2>
+        <p><a style="color: #f2f2f2" href="https://arcpredict.xyz">PredictArc</a>: YES/NO prediction markets on Arc, settled in USDC.</p>
+        <p><a style="color: #f2f2f2" href="https://heldby.vercel.app">Heldby</a>: USDC escrow on Arc with an AI arbiter.</p>
+        <h2 style="margin-top: 32px">Contact</h2>
+        <p><a style="color: #f2f2f2" href="mailto:alanleader6267@gmail.com">alanleader6267@gmail.com</a> · <a style="color: #f2f2f2" href="https://github.com/anshxft">GitHub</a> · <a style="color: #f2f2f2" href="https://x.com/imalanxx">X</a></p>
+        <p style="color: #7a7a7a; margin-top: 32px">This site is interactive; turn on JavaScript for the full experience.</p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

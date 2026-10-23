@@ -8,6 +8,7 @@ import Header from '../components/Header'
 import NotFound from './NotFound'
 import { TLink } from '../components/PageTransition'
 import { works } from '../content'
+import { usePageMeta } from '../lib/page-meta'
 import { useSmoothScroll } from '../lib/smooth-scroll'
 
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP)
@@ -28,6 +29,7 @@ function WorkView({ slug }: { slug?: string }) {
   const work = works[index]
   const next = works[(index + 1) % works.length]
   useSmoothScroll()
+  usePageMeta(work && `${work.title} — Ansh`, work?.summary)
   useLayoutEffect(() => {
     window.scrollTo(0, 0)
   }, [])
