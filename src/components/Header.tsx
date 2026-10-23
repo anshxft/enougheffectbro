@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { site } from '../content'
 import { lockScroll } from '../lib/smooth-scroll'
 import { TLink } from './PageTransition'
+import { LOOP_PATH } from '../lib/logo'
 import { SoundToggle } from './Sound'
 
 const nav = [
@@ -62,7 +63,11 @@ export default function Header() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-[70] flex items-center justify-between px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 mix-blend-difference select-none sm:px-8">
-        <TLink to="/" className="display inline-flex min-h-11 items-center text-lg" aria-label={`${site.name}, home`}>
+        <TLink to="/" className="group display inline-flex min-h-11 items-center gap-2.5 text-lg" aria-label={`${site.name}, home`}>
+          {/* the mark (the hero loop) turns a little on hover */}
+          <svg viewBox="0 0 100 100" aria-hidden className="size-6 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:rotate-[24deg]">
+            <path d={LOOP_PATH} fillRule="evenodd" fill="currentColor" />
+          </svg>
           {site.name}
         </TLink>
         <nav className="hidden gap-8 sm:flex" aria-label="Main">

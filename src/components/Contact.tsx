@@ -81,7 +81,7 @@ function FooterLogo() {
       window.clearTimeout(timer)
     }
   }, [])
-  const box = <span ref={ref} className="block h-14 w-[72px]" />
+  const box = <span ref={ref} className="block size-14" />
   return near ? <Suspense fallback={box}><LiquidLogo /></Suspense> : box
 }
 
