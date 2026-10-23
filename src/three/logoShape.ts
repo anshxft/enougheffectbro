@@ -127,3 +127,15 @@ export function sample(shape: string): Sampled {
   return { pos, nrm }
 }
 
+
+// xyz triples → RGBA texels (w = 0), the layout the GPU simulation reads; already-RGBA input passes through
+export function toRGBA(xyz: Float32Array) {
+  if (xyz.length === COUNT * 4) return xyz
+  const out = new Float32Array(COUNT * 4)
+  for (let i = 0; i < COUNT; i++) {
+    out[i * 4] = xyz[i * 3]
+    out[i * 4 + 1] = xyz[i * 3 + 1]
+    out[i * 4 + 2] = xyz[i * 3 + 2]
+  }
+  return out
+}

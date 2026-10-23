@@ -65,15 +65,21 @@ function LocalTime() {
   )
 }
 
-// The liquid-chrome A turns its glyph into a height map on the main thread (a few hundred ms), so it
-// only loads once the footer is about a screen away, never during the intro.
+// The liquid-chrome A compiles its shader on the main thread (~0.3s on some GPUs), so it's mounted
+// during idle time a few seconds after load (while the visitor is reading the top), or sooner if the
+// footer comes near, never in the middle of a scroll into the footer.
 function FooterLogo() {
   const ref = useRef<HTMLSpanElement>(null)
   const [near, setNear] = useState(false)
   useEffect(() => {
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: '100% 0px' })
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: '300% 0px' })
     io.observe(ref.current!)
-    return () => io.disconnect()
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1))
+    const timer = window.setTimeout(() => idle(() => setNear(true), { timeout: 3000 }), 9000)
+    return () => {
+      io.disconnect()
+      window.clearTimeout(timer)
+    }
   }, [])
   const box = <span ref={ref} className="block h-14 w-[72px]" />
   return near ? <Suspense fallback={box}><LiquidLogo /></Suspense> : box

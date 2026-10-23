@@ -1,78 +1,38 @@
 import { useEffect, useRef } from 'react'
+import { N, traceStrokes, type Stroke } from './scribbleTrace'
 
 // The alter ego (my X / Discord pfp) redrawn as scribble strokes spread across a whole layer.
 // Strokes are random walks traced along the drawing's dark lines, plus the loose grey scribbles of
 // its background. Built once from the image, then each layer paints them in its own ink:
 // `day` faint graphite on the white page, `night` glowing white on violet for the cursor lens.
 
-type Stroke = { pts: Float32Array; kind: 0 | 1 | 2 } // 0 figure, 1 loose background scribble, 2 the eye
-const N = 400 // the source image is N×N
-
 let built: Promise<Stroke[]> | null = null
 function strokes() {
-  built ??= new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
+  built ??= (async () => {
+    const res = await fetch('/alter/pfp.webp')
+    const bmp = await createImageBitmap(await res.blob(), { resizeWidth: N, resizeHeight: N })
+    try {
+      // trace off the main thread
+      const w = new Worker(new URL('./scribbleWorker.ts', import.meta.url), { type: 'module' })
+      return await new Promise<Stroke[]>((resolve, reject) => {
+        w.onmessage = (e: MessageEvent<Stroke[]>) => {
+          resolve(e.data)
+          w.terminate()
+        }
+        w.onerror = (e) => {
+          w.terminate()
+          reject(e)
+        }
+        w.postMessage(bmp, [bmp])
+      })
+    } catch {
       const c = document.createElement('canvas')
       c.width = c.height = N
-      const g = c.getContext('2d', { willReadFrequently: true })!
-      g.drawImage(img, 0, 0, N, N)
-      const px = g.getImageData(0, 0, N, N).data
-      const at = (x: number, y: number) => {
-        const i = ((Math.min(N - 1, Math.max(0, y | 0)) * N) + Math.min(N - 1, Math.max(0, x | 0))) * 4
-        return [px[i], px[i + 1], px[i + 2]]
-      }
-      const dark = (x: number, y: number) => {
-        const [r, gg, b] = at(x, y)
-        return 1 - (0.3 * r + 0.59 * gg + 0.11 * b) / 255
-      }
-      // the eye only: violet pixels in the eye's area (the jacket has blue-violet strokes too)
-      const eye = (x: number, y: number) => {
-        if (x < 175 || x > 255 || y < 140 || y > 200) return false
-        const [r, gg, b] = at(x, y)
-        return b > 110 && b > gg + 30 && r > gg
-      }
-      let seed = 7
-      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
-      const walk = (lo: number, hi: number, count: number, steps: number, step: number, kind: 0 | 1) => {
-        const inside = (x: number, y: number) => {
-          const d = dark(x, y)
-          return d > lo && d < hi
-        }
-        const out: Stroke[] = []
-        for (let guard = 0; out.length < count && guard < count * 40; guard++) {
-          let x = rnd() * N
-          let y = rnd() * N
-          if (!inside(x, y)) continue
-          let a = rnd() * 6.283
-          const pts = [x, y]
-          const isEye = kind === 0 && eye(x, y)
-          for (let k = 0; k < steps; k++) {
-            a += (rnd() - 0.5) * 1.1
-            let moved = false
-            for (const da of [0, 0.5, -0.5, 1, -1]) {
-              const nx = x + Math.cos(a + da) * step
-              const ny = y + Math.sin(a + da) * step
-              if (inside(nx, ny)) {
-                x = nx
-                y = ny
-                a += da
-                moved = true
-                break
-              }
-            }
-            if (!moved) break
-            pts.push(x, y)
-          }
-          if (pts.length > 8) out.push({ pts: new Float32Array(pts), kind: isEye ? 2 : kind })
-        }
-        return out
-      }
-      resolve([...walk(0.09, 0.4, 900, 60, 3, 1), ...walk(0.42, 2, 4200, 70, 2.4, 0)])
+      const g = c.getContext('2d')!
+      g.drawImage(await createImageBitmap(await (await fetch('/alter/pfp.webp')).blob()), 0, 0, N, N)
+      return traceStrokes(g.getImageData(0, 0, N, N).data)
     }
-    img.onerror = reject
-    img.src = '/alter/pfp.webp'
-  })
+  })()
   return built
 }
 
@@ -147,11 +107,26 @@ export default function Scribble({ mode }: { mode: 'day' | 'night' }) {
       { rootMargin: '150% 0px' },
     )
     io.observe(c)
+    // or earlier, in idle time after load (night after day, so they don't land in the same frame)
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1))
+    const timer = window.setTimeout(
+      () =>
+        idle(
+          () => {
+            if (painted) return
+            painted = true
+            void paint()
+          },
+          { timeout: 3000 },
+        ),
+      mode === 'day' ? 11000 : 12500,
+    )
     const resize = () => painted && void paint()
     window.addEventListener('resize', resize)
     return () => {
       alive = false
       io.disconnect()
+      window.clearTimeout(timer)
       window.removeEventListener('resize', resize)
     }
   }, [mode])

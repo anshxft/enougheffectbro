@@ -9,7 +9,7 @@ import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRe
 // and tumble in turbulence before settling back. A glowing core sits under a closed skin and lights
 // up where the skin is parted. Switching logos kicks the beads loose to re-form in a staggered wave.
 
-import { COUNT, SIDE, SIZE, SURFACE, sample, type Sampled } from './logoShape'
+import { COUNT, SIDE, SIZE, SURFACE, sample, toRGBA, type Sampled } from './logoShape'
 
 // ---------- simulation (GPGPU: one texel per bead) ----------
 // shared: cursor ray in the logo's space; `fallOff` is 1 on the ray and fades out by uRadius
@@ -174,11 +174,7 @@ const tex = (data: Float32Array) => {
   t.needsUpdate = true
   return t
 }
-const rgba = (xyz: Float32Array) => {
-  const out = new Float32Array(COUNT * 4)
-  for (let i = 0; i < COUNT; i++) out.set([xyz[i * 3], xyz[i * 3 + 1], xyz[i * 3 + 2], 0], i * 4)
-  return out
-}
+const rgba = toRGBA
 
 // cursor ray, logo-space scratch (one logo on screen)
 const local = { o: new THREE.Vector3(), d: new THREE.Vector3(), inv: new THREE.Matrix4(), hit: new THREE.Vector3(), last: new THREE.Vector3(), wind: new THREE.Vector3() }
@@ -219,7 +215,8 @@ function buildSim(targets: Sampled[], gl: THREE.WebGLRenderer, start: number) {
   const auxData = new Float32Array(COUNT * 4)
   const first = targets[0].pos
   for (let i = 0; i < COUNT; i++) {
-    const tip = Math.max(0, Math.hypot(first[i * 3], first[i * 3 + 1]) / SIZE - 0.35)
+    const st = first.length === COUNT * 4 ? 4 : 3
+    const tip = Math.max(0, Math.hypot(first[i * st], first[i * st + 1]) / SIZE - 0.35)
     auxData.set([Math.random(), Math.random() ** 24 * tip * 1.4, i < COUNT * SURFACE ? 0 : 1, Math.random() * 6.283], i * 4)
   }
   const aux = tex(auxData)
