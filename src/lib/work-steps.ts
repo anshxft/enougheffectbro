@@ -8,8 +8,8 @@ import { cardP, RING_END, RING_START } from './work-ring'
 // Inside that range one wheel or swipe gesture moves exactly one stop, so a hard flick can't skip
 // cards or projects (the last card of one project steps straight to the first of the next), and if the
 // page ever comes to rest between stops it glides to the nearest one: no card stays parked at the side.
-const STEP_S = 0.9
-const QUIET_MS = 200 // a gap this long between wheel events starts a new gesture
+const STEP_S = 0.75
+const QUIET_MS = 120 // a gap this long between wheel events (or a change of direction) starts a new gesture
 const TOUCH_MIN = 12 // px of finger travel before a swipe counts
 const EDGE = 4
 
@@ -47,8 +47,11 @@ export function useWorkSteps() {
     let busyUntil = 0
     const isBusy = () => performance.now() < busyUntil
     let last = 0
+    let lastDir = 0
+    let aim = 0 // the stop the current glide is heading for
     let wasInZone = false
     let touchTravel = 0
+    let touchSpent = false // this finger-down has already moved a card
     let settleTimer = 0
     const locked = () => autoScrolling || document.documentElement.style.overflow === 'hidden'
 
@@ -56,15 +59,26 @@ export function useWorkSteps() {
     const go = (y: number) => {
       const dist = Math.abs(y - window.scrollY) / window.innerHeight
       const dur = Math.min(1.6, Math.max(STEP_S, dist * 0.9))
+      aim = y
+      // whatever gesture caused this glide is spent; only a new one moves on
+      wasInZone = true
+      touchSpent = true
+      last = performance.now()
       busyUntil = performance.now() + dur * 1000 + 60
       if (lenis) lenis.scrollTo(y, { duration: dur, easing: ease, force: true })
       else window.scrollTo({ top: y })
     }
 
     setScrollGate(({ deltaY, event }) => {
+      if (event.type === 'touchstart') {
+        touchSpent = false
+        touchTravel = 0
+        return true
+      }
       if (!lenis || locked() || Math.abs(deltaY) < 0.5) return true
-      const y = lenis.animatedScroll
       const down = deltaY > 0
+      // mid-glide, a new gesture continues from where the glide is heading, not from where it is now
+      const y = isBusy() ? aim : lenis.animatedScroll
       const stops = workStops()
       const target = inZone(stops, y) ? (down ? stops.find((s) => s > y + EDGE) : [...stops].reverse().find((s) => s < y - EDGE)) : undefined
       if (target === undefined) {
@@ -73,15 +87,23 @@ export function useWorkSteps() {
       }
       if (event.cancelable) event.preventDefault()
       const now = performance.now()
-      const fresh = now - last > QUIET_MS
+      const dir = down ? 1 : -1
+      const fresh = now - last > QUIET_MS || dir !== lastDir
+      lastDir = dir
       const entering = !wasInZone
       wasInZone = true
       last = now
       if (event.type.startsWith('touch')) {
-        touchTravel = fresh ? deltaY : touchTravel + deltaY
+        // one swipe moves at most one card; lifting the finger (Lenis forwards touchend with the
+        // fling's velocity) is not a new swipe
+        if (event.type === 'touchend' || touchSpent) return false
+        touchTravel += deltaY
         if (Math.abs(touchTravel) < TOUCH_MIN) return false
+        touchTravel = 0
+        go(target)
+        return false
       }
-      if (isBusy() || !(fresh || entering)) return false
+      if (!(fresh || entering)) return false
       touchTravel = 0
       go(target)
       return false
