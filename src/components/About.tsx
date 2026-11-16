@@ -68,7 +68,7 @@ function Stage({ side, night }: { side: Side; night?: boolean }) {
       <h2
         id={night ? undefined : 'about-title'}
         aria-hidden={night}
-        className={`display relative text-[clamp(1.5rem,6vw,6rem)] leading-[1] ${ink}`}
+        className={`display relative text-[clamp(1.5rem,6.6vw,3rem)] leading-[1] sm:text-[clamp(1.5rem,6vw,6rem)] ${ink}`}
         aria-label={night ? undefined : `${side.lead} ${side.highlight}`}
       >
         <span aria-hidden>

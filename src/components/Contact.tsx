@@ -142,8 +142,8 @@ export default function Contact() {
             />
           </a>
         </h2>
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          <a href={`mailto:${site.email}`} className="ct-in mr-2 inline-flex min-h-11 items-center font-mono text-sm text-fg/70 transition-colors hover:text-fg sm:text-base">
+        <div className="mt-10 flex flex-wrap items-center gap-4 max-sm:-mx-2 max-sm:rounded-2xl max-sm:bg-bg/85 max-sm:p-3">
+          <a href={`mailto:${site.email}`} className="ct-in mr-2 inline-flex min-h-11 items-center font-mono text-sm text-fg/70 max-sm:basis-full max-sm:text-fg/90 transition-colors hover:text-fg sm:text-base">
             {site.email}
           </a>
           <Magnetic>
