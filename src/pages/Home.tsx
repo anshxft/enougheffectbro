@@ -16,8 +16,9 @@ import Services from '../components/Services'
 import Stack from '../components/Stack'
 import Section from '../components/Section'
 import { site, works } from '../content'
-import { prefersReducedMotion, scrollToTarget, scrollToY, useSmoothScroll } from '../lib/smooth-scroll'
-import { cardP, RING_END, RING_START, WORK_VH } from '../lib/work-ring'
+import { prefersReducedMotion, scrollToTarget, useSmoothScroll } from '../lib/smooth-scroll'
+import { useWorkSteps } from '../lib/work-steps'
+import { WORK_VH } from '../lib/work-ring'
 import { introPlayed, playIntro } from '../three/fx'
 
 const Scene = lazy(() => import('../three/Scene'))
@@ -73,54 +74,8 @@ export default function Home() {
     })
   }, [])
 
-  // works ring snap: once scrolling settles inside a project, glide to the nearest card so a quick
-  // flick never leaves a card half-turned or skipped
-  useEffect(() => {
-    let timer = 0
-    let snapping = false
-    const settle = () => {
-      if (snapping || document.documentElement.style.overflow === 'hidden') return
-      const vh = window.innerHeight
-      for (const [k, w] of works.entries()) {
-        const el = document.getElementById(`work-${w.slug}`)
-        if (!el) continue
-        const top = el.getBoundingClientRect().top + window.scrollY
-        const span = el.offsetHeight + vh
-        const p = (window.scrollY + vh - top) / span
-        if (p <= RING_START || p >= RING_END) continue
-        const n = works[k].images.length
-        let best = window.scrollY
-        let bestD = Infinity
-        for (let i = 0; i < n; i++) {
-          const y = cardP(i, n) * span - vh + top
-          const d = Math.abs(y - window.scrollY)
-          if (d < bestD) {
-            bestD = d
-            best = y
-          }
-        }
-        // only between the first and last card: entering / leaving stays free
-        const first = cardP(0, n) * span - vh + top
-        const last = cardP(n - 1, n) * span - vh + top
-        if (window.scrollY < first - vh * 0.35 || window.scrollY > last + vh * 0.35) return
-        if (bestD > 2) {
-          snapping = true
-          scrollToY(best, 0.7)
-          window.setTimeout(() => (snapping = false), 800)
-        }
-        return
-      }
-    }
-    const onScroll = () => {
-      window.clearTimeout(timer)
-      timer = window.setTimeout(settle, 160)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.clearTimeout(timer)
-    }
-  }, [])
+  // works ring: one card per gesture, and never left resting between cards (src/lib/work-steps.ts)
+  useWorkSteps()
 
   // #works etc. from the nav or another page: scroll there once the page (and loader) allow it
   const { hash } = useLocation()

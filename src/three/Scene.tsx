@@ -40,7 +40,8 @@ function Prism({ low }: { low: boolean }) {
   // The glass re-renders the scene behind it every frame, so it only runs in the hero and the contact finale.
   const [onStage, setOnStage] = useState(true)
   // what the glass refracts: the scene without the prism, at reduced resolution
-  const fboScale = low ? 0.25 : 0.35
+  // phones are narrow (~400 css px), so a small fraction of that refracts as mush: give them more
+  const fboScale = mobile ? 0.6 : low ? 0.25 : 0.35
   const behind = useFBO(Math.round(size.width * fboScale), Math.round(size.height * fboScale), { samples: 0 })
   const uniforms = useMemo(
     () => ({
@@ -108,8 +109,6 @@ function Prism({ low }: { low: boolean }) {
       // centre stage through the interlude; steps back as the first project swings in so the
       // screens pass in front of it; lifts away as About arrives
       const back = THREE.MathUtils.smoothstep(sp, 0.86, 1)
-      // phones: the screens are narrow, so the loop would show beneath them; it shrinks away instead
-      if (mobile) m.scale.multiplyScalar(Math.max(0.001, 1 - back * (1 - THREE.MathUtils.smoothstep(ap, 0.1, 0.9))))
       const exit = THREE.MathUtils.smoothstep(ap, 0.1, 0.9)
       m.position.x += (0 - m.position.x) * k
       m.position.y += (exit * viewport.height * 0.9 - m.position.y) * k
@@ -263,7 +262,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
   useEffect(listenInput, [])
   // Quality tier: phones start low; PerformanceMonitor drops to low when FPS sags and climbs back when it recovers.
   const mobile = useMemo(() => isMobile(), [])
-  const maxDpr = Number(flags.get('dpr')) || Math.min(window.devicePixelRatio, mobile ? 1.25 : 1.5)
+  const maxDpr = Number(flags.get('dpr')) || Math.min(window.devicePixelRatio, 1.5)
   const [low, setLow] = useState(mobile)
   const [dpr, setDpr] = useState(maxDpr)
   const [warm, setWarm] = useState(false)

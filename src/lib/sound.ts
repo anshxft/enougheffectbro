@@ -34,31 +34,68 @@ function audio() {
   return { ctx, master: master! }
 }
 
-// Low ambient bed: three detuned voices through a lowpass whose cutoff slowly breathes.
+// Background music: slow ambient chords (Fmaj9, Am7, Dm9, Cmaj7, 8 s each) as soft pads, with
+// sparse pentatonic plucks echoing through a feedback delay. Notes are scheduled a chord ahead.
+const midi = (n: number) => 440 * 2 ** ((n - 69) / 12)
+const CHORDS = [
+  [41, 53, 57, 60, 64, 67],
+  [45, 52, 55, 60, 64],
+  [38, 50, 57, 60, 64, 65],
+  [36, 52, 55, 59, 64],
+]
+const PLUCKS = [72, 74, 76, 79, 81, 84]
+const BAR = 8
+
 function startDrone() {
   if (droneStarted) return
   droneStarted = true
   const { ctx, master } = audio()
-  const filter = ctx.createBiquadFilter()
-  filter.type = 'lowpass'
-  filter.frequency.value = 420
-  filter.Q.value = 4
-  const lfo = ctx.createOscillator()
-  const lfoDepth = ctx.createGain()
-  lfo.frequency.value = 0.06
-  lfoDepth.gain.value = 220
-  lfo.connect(lfoDepth).connect(filter.frequency)
-  const bed = ctx.createGain()
-  bed.gain.value = 0.045
-  for (const [type, freq] of [['sawtooth', 55], ['sine', 82.4], ['triangle', 110.6]] as const) {
+  const bus = ctx.createGain()
+  bus.gain.value = 0.5
+  const lp = ctx.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = 1800
+  const delay = ctx.createDelay(2)
+  delay.delayTime.value = 0.42
+  const fb = ctx.createGain()
+  fb.gain.value = 0.38
+  delay.connect(fb).connect(delay)
+  delay.connect(lp)
+  lp.connect(bus).connect(master)
+
+  const voice = (freq: number, at: number, len: number, peak: number, type: OscillatorType, echo: boolean) => {
     const o = ctx.createOscillator()
+    const g = ctx.createGain()
     o.type = type
     o.frequency.value = freq
-    o.connect(filter)
-    o.start()
+    o.detune.value = (Math.random() - 0.5) * 8
+    g.gain.setValueAtTime(0, at)
+    g.gain.linearRampToValueAtTime(peak, at + (echo ? 0.01 : 2.2))
+    g.gain.setTargetAtTime(0, at + (echo ? 0.05 : len - 2), echo ? 0.35 : 1.2)
+    o.connect(g).connect(lp)
+    if (echo) g.connect(delay)
+    o.start(at)
+    o.stop(at + len + 4)
   }
-  filter.connect(bed).connect(master)
-  lfo.start()
+
+  let bar = 0
+  let next = ctx.currentTime + 0.1
+  const schedule = () => {
+    while (next < ctx.currentTime + BAR) {
+      const chord = CHORDS[bar % CHORDS.length]
+      chord.forEach((n, i) => voice(midi(n), next + i * 0.06, BAR + 1, i === 0 ? 0.05 : 0.026, i === 0 ? 'sine' : 'triangle', false))
+      // two or three plucks somewhere in the bar
+      for (let k = 0; k < 2 + (bar % 2); k++) {
+        const n = PLUCKS[Math.floor(Math.random() * PLUCKS.length)]
+        voice(midi(n), next + 1 + Math.random() * (BAR - 2), 1.5, 0.03, 'sine', true)
+      }
+      bar++
+      next += BAR
+    }
+  }
+  schedule()
+  // ponytail: never cleared; the music lives as long as the page
+  window.setInterval(() => ctx.state === 'running' && schedule(), 2000)
 }
 
 export function setSound(next: boolean) {
