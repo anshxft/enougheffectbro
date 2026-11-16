@@ -15,7 +15,17 @@ const EDGE = 4
 
 const ease = (t: number) => 1 - (1 - t) ** 3
 
+// measured once and again only when the page height changes (resize, fonts, images), never per scroll event
+let cache: { key: number; stops: number[] } | null = null
 function workStops(): number[] {
+  const key = document.documentElement.scrollHeight * 10000 + window.innerHeight
+  if (cache?.key === key) return cache.stops
+  const stops = measureStops()
+  cache = { key, stops }
+  return stops
+}
+
+function measureStops(): number[] {
   const vh = window.innerHeight
   const per = works.flatMap((w) => {
     const el = document.getElementById(`work-${w.slug}`)

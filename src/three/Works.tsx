@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
@@ -67,7 +67,22 @@ function WorkScene({ work }: { work: Work }) {
         t.anisotropy = 4
       }),
   )
-  const { viewport } = useThree()
+  const { viewport, gl } = useThree()
+  // upload the screenshots to the GPU while the page is idle, not on the frame a card first shows
+  // (that first-use upload was a 50-300 ms hitch as each project swung in)
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 200))
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout
+    let i = 0
+    let id = 0
+    const next = () => {
+      if (i >= textures.length) return
+      gl.initTexture(textures[i++])
+      id = idle(next, { timeout: 2000 })
+    }
+    id = idle(next, { timeout: 2000 })
+    return () => cancel(id)
+  }, [gl, textures])
   const outer = useRef<THREE.Group>(null)
   const ring = useRef<THREE.Group>(null)
   const mats = useRef<(THREE.ShaderMaterial | null)[]>([])
