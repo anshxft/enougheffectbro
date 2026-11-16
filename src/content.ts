@@ -69,6 +69,54 @@ export type Work = {
 
 export const works: Work[] = [
   {
+    slug: 'sooth',
+    title: 'Sooth',
+    year: '2026',
+    url: 'https://sooth-wine.vercel.app',
+    urlLabel: 'sooth-wine.vercel.app',
+    tags: ['Web3', 'AI agents', 'Dev'],
+    summary: 'An oracle on NEAR where AI agents stake NEAR on sealed answers. Wrong agents pay the right ones. Built for NEAR Hackathon 2026.',
+    highlights: [
+      'Five AI agents seal their answers, reveal them together, and the contract settles only when 80% of the weight agrees',
+      'Swarm Contractor: AI agents hire AI workers by sealed bid, and the jury referees disputes. It caught a worker hiding a prompt injection, with 91.6% of the weight',
+      'Two Rust contracts on NEAR testnet, nine agents on GitHub Actions, 110 tests, and one read-only script that checks every claim on chain',
+    ],
+    tech: ['Rust', 'near-sdk', 'NEAR', 'TypeScript', 'React 19', 'Vite', 'Tailwind 4', 'three.js', 'GSAP', 'GitHub Actions'],
+    hero: {
+      image: '/works/sooth-hero.webp',
+      alt: 'Sooth swarm page: a contractor agent hiring workers by sealed bid, with the jury settling disputes',
+    },
+    images: [
+      { src: '/works/sooth-1.webp', alt: 'Sooth home: Many agents. One truth., with the aperture mark' },
+      { src: '/works/sooth-2.webp', alt: 'Sooth verdict page: the jury answered NO, with each juror’s answer and the money flow' },
+      { src: '/works/sooth-3.webp', alt: 'Sooth agents leaderboard: five agents ranked by reputation, the bribed one slashed' },
+    ],
+  },
+  {
+    slug: 'sealroom',
+    title: 'Sealroom',
+    year: '2026',
+    url: 'https://github.com/anshxft/sealroom',
+    urlLabel: 'github.com/anshxft/sealroom',
+    tags: ['AI agents', 'Workflow'],
+    summary: 'Blind code review in Switch: three AI reviewers judge the same change in separate rooms, one reveal, a human signs off. Built for Flip the Switch.',
+    highlights: [
+      'Each reviewer sits in its own Switch room, so none can read another’s verdict before writing its own',
+      'A moderator agent sends the change out, waits for all three, and reveals them together. It never decides; the human does',
+      'In the live run all three blocked a harmless-looking change, and the security reviewer alone found a second bug',
+    ],
+    tech: ['Switch', 'Claude Code agents', 'YAML templates', 'Discord bridge'],
+    hero: {
+      image: '/works/sealroom-hero.webp',
+      alt: 'Sealroom title card: blind code review for AI agents, with the reveal on a tilted screen',
+    },
+    images: [
+      { src: '/works/sealroom-1.webp', alt: 'Sealroom in Discord: the moderator seals a review and sends it to three blind rooms' },
+      { src: '/works/sealroom-2.webp', alt: 'Sealroom blind room: one reviewer working alone on the change' },
+      { src: '/works/sealroom-3.webp', alt: 'Sealroom reveal: all three verdicts posted together, each one BLOCK' },
+    ],
+  },
+  {
     slug: 'predictarc',
     title: 'PredictArc',
     year: '2026',
@@ -137,6 +185,8 @@ export const services = [
 ]
 
 export const experience = [
+  { year: '2026', title: 'Sooth', body: 'AI agent oracle on NEAR, built for NEAR Hackathon.' },
+  { year: '2026', title: 'Sealroom', body: 'Blind code review with AI agents, built for Flip the Switch.' },
   { year: '2026', title: 'PredictArc', body: 'Prediction markets live on Arc mainnet.' },
   { year: '2026', title: 'Heldby', body: 'USDC escrow with an AI arbiter on Arc.' },
   { year: 'Now', title: 'Student', body: '18, building and trading.' },
